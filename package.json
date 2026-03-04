@@ -1,0 +1,68 @@
+{
+  "name": "pos-management-system",
+  "productName": "نظام إدارة نقاط البيع",
+  "version": "1.2.7",
+  "description": "نظام محاسبي وإداري متكامل لنقاط البيع والمخازن",
+  "main": "main.js",
+  "author": {
+    "name": "ETQAN Solutions",
+    "email": "support@etqan.com"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "tsc --noEmit",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on tcp:3000 && electron .\"",
+    "start": "npm run dev",
+    "dist": "npm run build && electron-builder"
+  },
+  "keywords": [
+    "pos",
+    "erp",
+    "sales"
+  ],
+  "build": {
+    "appId": "com.prodev.pos",
+    "productName": "نظام إدارة نقاط البيع",
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    }
+  },
+  "dependencies": {
+    "@google/genai": "^1.43.0",
+    "emoji-picker-react": "^4.18.0",
+    "firebase": "^10.8.0",
+    "framer-motion": "^12.34.3",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "lucide-react": "^0.575.0",
+    "motion": "^12.34.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.2.1",
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.0",
+    "wait-on": "^7.2.0"
+  }
+}

@@ -1,0 +1,24 @@
+
+{
+  "short_name": "POS System",
+  "name": "POS Management System",
+  "description": "A comprehensive Point of Sale (POS) management system.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/192/2931/2931242.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2931/2931242.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#f3f4f6"
+}
