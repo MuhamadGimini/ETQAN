@@ -124,6 +124,8 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
     }, [newReturn.items.length]);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [returnToDelete, setReturnToDelete] = useState<PurchaseReturn | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [isQuickAddItemModalOpen, setIsQuickAddItemModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
 
@@ -514,6 +516,17 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
         }).sort((a, b) => (b.id as number) - (a.id as number));
     }, [purchaseReturns, logFilters, suppliers, items]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [logFilters]);
+
+    const paginatedLog = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredLog.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredLog, currentPage]);
+
+    const totalPages = Math.ceil(filteredLog.length / itemsPerPage);
+
     const totalInLog = useMemo(() => filteredLog.reduce((sum, ret) => sum + (ret.items.reduce((acc, i) => acc + i.price * i.quantity, 0) - ret.discount) * (1 + ret.tax / 100), 0), [filteredLog]);
 
     const modalInvoicesToSelect = useMemo(() => {
@@ -641,7 +654,7 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                                         <input type="text" value={supplierSearchQuery} onChange={(e) => { setSupplierSearchQuery(e.target.value); openDropdown('supplier'); }} onFocus={() => openDropdown('supplier')} onBlur={() => setTimeout(() => setIsSupplierSuggestionsOpen(false), 250)} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} placeholder="بحث..." autoComplete="off" />
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                     </div>
-                                    {isSupplierSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedSuppliers.map(s => <li key={s.id} onMouseDown={() => { handleSupplierSelect(s); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b last:border-0 dark:text-white">{s.name}</li>)}</ul>}
+                                    {isSupplierSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedSuppliers.slice(0, 50).map(s => <li key={s.id} onMouseDown={() => { handleSupplierSelect(s); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b last:border-0 dark:text-white">{s.name}</li>)}</ul>}
                                 </div>
                                  {supplierBalance !== null && (
                                      <div className="mt-2 text-xl font-black whitespace-nowrap z-0">
@@ -658,7 +671,7 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                                     <input type="text" value={warehouseSearchQuery} onChange={(e) => { setWarehouseSearchQuery(e.target.value); openDropdown('warehouse'); }} onFocus={() => openDropdown('warehouse')} onBlur={() => setTimeout(() => setIsWarehouseSuggestionsOpen(false), 250)} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} autoComplete="off" />
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
-                                {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.map(w => <li key={w.id} onMouseDown={() => { handleWarehouseSelect(w); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
+                                {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.slice(0, 50).map(w => <li key={w.id} onMouseDown={() => { handleWarehouseSelect(w); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
                              </div>
                              <div className="lg:col-span-2">
                                 <label className={labelClass}>نوع المرتجع</label>
@@ -893,7 +906,7 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredLog.map(ret => {
+                                    {paginatedLog.map(ret => {
                                         const itemsTotal = ret.items.reduce((s,i)=>s+i.price*i.quantity,0);
                                         const retTotal = (itemsTotal - ret.discount)*(1+ret.tax/100);
                                         return (
@@ -921,6 +934,28 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                                 </tbody>
                             </table>
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                    disabled={currentPage === 1} 
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    السابق
+                                </button>
+                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    صفحة {currentPage} من {totalPages}
+                                </span>
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                    disabled={currentPage === totalPages} 
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    التالي
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

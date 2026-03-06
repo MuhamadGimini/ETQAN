@@ -110,6 +110,8 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
     
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [invoiceToDelete, setInvoiceToDelete] = useState<PurchaseInvoice | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [isQuickAddItemModalOpen, setIsQuickAddItemModalOpen] = useState(false);
     const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
     const [isHeldInvoicesModalOpen, setIsHeldInvoicesModalOpen] = useState(false);
@@ -134,9 +136,9 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
         return item.openingBalance;
     };
 
-    const getTreasuryBalance = (treasuryId: number) => {
-        return calculateTreasuryBalance(treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, newInvoice.id, 'purchaseInvoice');
-    };
+    const currentTreasuryBalance = useMemo(() => {
+        return calculateTreasuryBalance(defaultValues.defaultTreasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, newInvoice.id, 'purchaseInvoice');
+    }, [newInvoice.id, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues]);
 
     useEffect(() => {
         if (newInvoice.supplierId) {
@@ -491,6 +493,17 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
         }).sort((a, b) => (b.id as number) - (a.id as number));
     }, [purchaseInvoices, logFilters, suppliers, items]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [logFilters]);
+
+    const paginatedLog = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredLog.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredLog, currentPage]);
+
+    const totalPages = Math.ceil(filteredLog.length / itemsPerPage);
+
     const totalInLog = useMemo(() => filteredLog.reduce((sum, inv) => sum + (inv.items.reduce((acc, i) => acc + i.price * i.quantity, 0) - inv.discount) * (1 + inv.tax / 100), 0), [filteredLog]);
 
     const subtotal = useMemo(() => newInvoice.items.reduce((acc, item) => acc + item.quantity * item.price, 0), [newInvoice.items]);
@@ -586,7 +599,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                     </div>
                                     {isSupplierSuggestionsOpen && (
                                         <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">
-                                            {suggestedSuppliers.length > 0 ? suggestedSuppliers.map(s => (
+                                            {suggestedSuppliers.length > 0 ? suggestedSuppliers.slice(0, 50).map(s => (
                                                 <li key={s.id} onMouseDown={() => { setNewInvoice(p=>({...p, supplierId: s.id})); setSupplierSearchQuery(s.name); setIsSupplierSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold border-b last:border-0 dark:text-white">
                                                     {s.name}
                                                 </li>
@@ -608,7 +621,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                     <input type="text" value={warehouseSearchQuery} onChange={(e) => { setWarehouseSearchQuery(e.target.value); openDropdown('warehouse'); }} onFocus={() => openDropdown('warehouse')} onBlur={() => setTimeout(() => setIsWarehouseSuggestionsOpen(false), 250)} className={inputClass} autoComplete="off" />
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
-                                {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.map(w => <li key={w.id} onMouseDown={() => { setNewInvoice(p=>({...p, warehouseId: w.id})); setWarehouseSearchQuery(w.name); setIsWarehouseSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
+                                {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.slice(0, 50).map(w => <li key={w.id} onMouseDown={() => { setNewInvoice(p=>({...p, warehouseId: w.id})); setWarehouseSearchQuery(w.name); setIsWarehouseSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
                              </div>
                              <div className="lg:col-span-2 relative">
                                 <label className={labelClass}>النوع</label>
@@ -619,7 +632,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                 {newInvoice.type === 'cash' && (
                                      <div className="absolute top-full right-0 text-xl font-black mt-1 whitespace-nowrap z-0">
                                         <span className="text-gray-700 dark:text-gray-400">رصيد الخزينة: </span>
-                                        <span className="text-blue-600"><FormattedNumber value={getTreasuryBalance(defaultValues.defaultTreasuryId)} /></span>
+                                        <span className="text-blue-600"><FormattedNumber value={currentTreasuryBalance} /></span>
                                      </div>
                                 )}
                              </div>
@@ -778,7 +791,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredLog.map(inv => {
+                                    {paginatedLog.map(inv => {
                                         const itemsTotal = inv.items.reduce((s,i)=>s+i.price*i.quantity,0);
                                         const invTotal = (itemsTotal - inv.discount) * (1 + inv.tax / 100);
                                         return (
@@ -800,6 +813,28 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                 </tbody>
                             </table>
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                    disabled={currentPage === 1} 
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    السابق
+                                </button>
+                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    صفحة {currentPage} من {totalPages}
+                                </span>
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                    disabled={currentPage === totalPages} 
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    التالي
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

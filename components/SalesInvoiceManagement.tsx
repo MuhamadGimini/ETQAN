@@ -130,6 +130,8 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
     const [isLogVisible, setIsLogVisible] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [invoiceToDelete, setInvoiceToDelete] = useState<SalesInvoice | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [isQuickAddItemModalOpen, setIsQuickAddItemModalOpen] = useState(false);
     const [isHeldInvoicesModalOpen, setIsHeldInvoicesModalOpen] = useState(false);
 
@@ -597,6 +599,17 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
         }).sort((a, b) => (b.id as number) - (a.id as number));
     }, [salesInvoices, logFilters, customers, salesRepresentatives, items]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [logFilters]);
+
+    const paginatedLog = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredLog.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredLog, currentPage]);
+
+    const totalPages = Math.ceil(filteredLog.length / itemsPerPage);
+
     const totalInLog = useMemo(() => filteredLog.reduce((sum, inv) => {
         const invTotal = (inv.items.reduce((acc, i) => acc + i.price * i.quantity, 0) - inv.discount) * (1 + inv.tax / 100);
         return sum + invTotal;
@@ -727,7 +740,7 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                     </div>
                                     {isCustomerSuggestionsOpen && (
                                         <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-green-300 rounded mt-1 max-h-60 overflow-y-auto top-full shadow-2xl">
-                                            {suggestedCustomers.length > 0 ? suggestedCustomers.map(c => (
+                                            {suggestedCustomers.length > 0 ? suggestedCustomers.slice(0, 50).map(c => (
                                                 <li key={c.id} onMouseDown={() => { handleCustomerSelect(c); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b last:border-0 dark:text-white">
                                                     {c.name}
                                                 </li>
@@ -755,7 +768,7 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                     <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); openDropdown('salesRep'); }} onFocus={() => openDropdown('salesRep')} onBlur={() => setTimeout(() => setIsSalesRepSuggestionsOpen(false), 250)} className={inputClass} disabled={isEditing && !canEdit} autoComplete="off"/>
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
-                                {isSalesRepSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-green-300 rounded mt-1 max-h-40 overflow-y-auto shadow-2xl">{suggestedSalesReps.map(r => <li key={r.id} onMouseDown={() => { setNewInvoice(p=>({...p, salesRepId: r.id})); setSalesRepSearchQuery(r.name); setIsSalesRepSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{r.name}</li>)}</ul>}
+                                {isSalesRepSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-green-300 rounded mt-1 max-h-40 overflow-y-auto shadow-2xl">{suggestedSalesReps.slice(0, 50).map(r => <li key={r.id} onMouseDown={() => { setNewInvoice(p=>({...p, salesRepId: r.id})); setSalesRepSearchQuery(r.name); setIsSalesRepSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{r.name}</li>)}</ul>}
                              </div>
                              <div className="lg:col-span-2">
                                 <label className={labelClass}>نوع الفاتورة</label>
@@ -932,7 +945,7 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredLog.map(inv => {
+                                    {paginatedLog.map(inv => {
                                         const salesRep = salesRepresentatives.find(r => r.id === inv.salesRepId);
                                         const itemsTotal = inv.items.reduce((s,i)=>s+i.price*i.quantity,0);
                                         const invTotal = (itemsTotal - inv.discount) * (1 + inv.tax / 100);
@@ -954,6 +967,28 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                 </tbody>
                             </table>
                         </div>
+                        
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                    disabled={currentPage === 1} 
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    السابق
+                                </button>
+                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    صفحة {currentPage} من {totalPages}
+                                </span>
+                                <button 
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                    disabled={currentPage === totalPages} 
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    التالي
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

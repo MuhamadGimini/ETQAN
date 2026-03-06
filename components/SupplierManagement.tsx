@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Modal, ConfirmationModal, EditIcon, DeleteIcon, UploadIcon, DownloadIcon, ViewIcon, FormattedNumber, PlusCircleIcon } from './Shared';
 import type { Supplier, NotificationType, MgmtUser, PurchaseInvoice, PurchaseReturn, SupplierPayment } from '../types';
 import { exportToExcel, readFromExcel } from '../services/excel';
@@ -23,6 +23,8 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ suppliers, setS
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const importFileRef = useRef<HTMLInputElement>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -111,11 +113,22 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ suppliers, setS
         setIsModalOpen(false);
     };
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery]);
+
     const displayedSuppliers = useMemo(() => {
         return suppliers
             .filter(s => searchMatch(s.name, searchQuery) || searchMatch(s.phone, searchQuery))
             .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
     }, [suppliers, searchQuery]);
+
+    const paginatedSuppliers = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return displayedSuppliers.slice(startIndex, startIndex + itemsPerPage);
+    }, [displayedSuppliers, currentPage]);
+
+    const totalPages = Math.ceil(displayedSuppliers.length / itemsPerPage);
 
     const stats = useMemo(() => {
         let debitTotal = 0; // علينا للمورد (رصيد موجب للمورد في النظام المحاسبي المورد دائن)
@@ -272,7 +285,7 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ suppliers, setS
                                 </tr>
                             </thead>
                             <tbody>
-                                {displayedSuppliers.map((s) => (
+                                {paginatedSuppliers.map((s) => (
                                     <tr key={s.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors">
                                         <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{s.name}</td>
                                         <td className="p-3 text-gray-700 dark:text-gray-300 font-mono">{s.phone || '-'}</td>
@@ -309,6 +322,28 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ suppliers, setS
                             </tbody>
                         </table>
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                disabled={currentPage === 1} 
+                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                السابق
+                            </button>
+                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                صفحة {currentPage} من {totalPages}
+                            </span>
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                disabled={currentPage === totalPages} 
+                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                التالي
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

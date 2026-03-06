@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon, WhatsAppIcon } from './Shared';
 // consolidated import of DocToView from types
 import type { CustomerReceipt, Customer, Treasury, NotificationType, MgmtUser, SalesInvoice, SalesReturn, DefaultValues, CompanyData, SupplierPayment, Expense, TreasuryTransfer, PurchaseInvoice, PurchaseReturn, DocToView } from '../types';
@@ -65,9 +65,12 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
     const [isViewing, setIsViewing] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [receiptToDelete, setReceiptToDelete] = useState<CustomerReceipt | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [customerBalance, setCustomerBalance] = useState<number | null>(null);
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
     const [isCustomerSuggestionsOpen, setIsCustomerSuggestionsOpen] = useState(false);
+    const customerDropdownRef = useRef<HTMLDivElement>(null);
     
     const [searchFilters, setSearchFilters] = useState({
         id: '',
@@ -104,6 +107,19 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
     }, [formData.id, formData.customerId, customers]);
 
     useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+                setIsCustomerSuggestionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    useEffect(() => {
         if (formData.customerId) {
             const customer = customers.find(c => c.id === formData.customerId);
             if (customer) {
@@ -128,9 +144,10 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
         } else setCustomerBalance(null);
     }, [formData.customerId, formData.id, customers, salesInvoices, salesReturns, customerReceipts]);
 
-    const getTreasuryBalance = (treasuryId: number) => {
-        return calculateTreasuryBalance(treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, formData.id, 'customerReceipt');
-    };
+    const currentTreasuryBalance = useMemo(() => {
+        if (!formData.treasuryId) return 0;
+        return calculateTreasuryBalance(formData.treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, formData.id, 'customerReceipt');
+    }, [formData.treasuryId, formData.id, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -208,6 +225,17 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
         }).sort((a, b) => b.id - a.id);
     }, [customerReceipts, searchFilters, customers, treasuries]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchFilters]);
+
+    const paginatedReceipts = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredReceipts, currentPage]);
+
+    const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
+
     const filteredTotal = useMemo(() => filteredReceipts.reduce((sum, r) => sum + r.amount, 0), [filteredReceipts]);
 
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
@@ -236,7 +264,7 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                             <label className={labelClass}>التاريخ</label>
                             <input type="text" {...dateInputProps} className={inputClass} disabled={isViewing || (isEditing && !canEditDate)} />
                         </div>
-                        <div className="flex-[30%] min-w-[200px] relative z-[40]">
+                        <div className="flex-[30%] min-w-[200px] relative z-[40]" ref={customerDropdownRef}>
                             <label className={labelClass}>العميل</label>
                              <div className="relative">
                                 <input type="text" value={customerSearchQuery} onChange={handleCustomerSearchChange} onFocus={() => setIsCustomerSuggestionsOpen(true)} placeholder="ابحث بالاسم..." className={inputClass} disabled={isViewing} autoComplete="off" />
@@ -244,7 +272,7 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                             </div>
                             {isCustomerSuggestionsOpen && suggestedCustomers.length > 0 && (
                                 <ul className="absolute z-[100] w-full bg-white dark:bg-gray-800 border-2 border-indigo-300 rounded-md mt-1 max-h-60 overflow-y-auto shadow-xl top-full">
-                                    {suggestedCustomers.map(customer => <li key={customer.id} onMouseDown={() => handleCustomerSelect(customer)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold text-gray-800 dark:text-gray-200 border-b last:border-0">{customer.name}</li>)}
+                                    {suggestedCustomers.slice(0, 50).map(customer => <li key={customer.id} onMouseDown={() => handleCustomerSelect(customer)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold text-gray-800 dark:text-gray-200 border-b last:border-0">{customer.name}</li>)}
                                 </ul>
                             )}
                             {customerBalance !== null && (
@@ -299,7 +327,7 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                             </select>
                              {formData.treasuryId > 0 && formData.paymentMethod !== 'discount' && (
                                 <div className="absolute top-full right-0 text-xl font-black mt-1 whitespace-nowrap text-indigo-800 dark:text-indigo-300">
-                                    المتاح: <FormattedNumber value={getTreasuryBalance(formData.treasuryId)} />
+                                    المتاح: <FormattedNumber value={currentTreasuryBalance} />
                                 </div>
                             )}
                         </div>
@@ -365,7 +393,7 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredReceipts.map((r) => {
+                                {paginatedReceipts.map((r) => {
                                     const customer = customers.find(c => c.id === r.customerId);
                                     const treasury = treasuries.find(t => t.id === r.treasuryId);
                                     const methodLabel = r.paymentMethod === 'cash' ? 'نقدي' : r.paymentMethod === 'check' ? 'شيك' : 'خصم مسموح به';
@@ -404,6 +432,28 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                         <div className="bg-gray-50 dark:bg-gray-800 font-bold p-3 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
                             <span className="text-gray-700 dark:text-gray-300">إجمالي الصفحة:</span>
                             <span className="text-green-600 text-lg"><FormattedNumber value={filteredTotal} /></span>
+                        </div>
+                    )}
+
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                disabled={currentPage === 1} 
+                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                السابق
+                            </button>
+                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                صفحة {currentPage} من {totalPages}
+                            </span>
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                disabled={currentPage === totalPages} 
+                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                التالي
+                            </button>
                         </div>
                     )}
                 </div>

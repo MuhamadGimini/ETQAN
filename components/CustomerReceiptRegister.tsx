@@ -27,6 +27,9 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
         notes: ''
     });
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
+
     const filteredReceipts = useMemo(() => {
         return customerReceipts.filter(rec => {
             const customerName = customers.find(c => c.id === rec.customerId)?.name || '';
@@ -44,6 +47,13 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
             );
         }).sort((a, b) => b.id - a.id);
     }, [customerReceipts, searchFilters, customers, treasuries]);
+
+    const paginatedReceipts = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredReceipts, currentPage]);
+
+    const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
 
     const filteredTotal = useMemo(() => filteredReceipts.reduce((sum, r) => sum + r.amount, 0), [filteredReceipts]);
 
@@ -88,7 +98,7 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
                     </div>
                     
                     <div className="overflow-y-auto max-h-[576px] scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
-                        {filteredReceipts.map((r) => {
+                        {paginatedReceipts.map((r) => {
                             const customer = customers.find(c => c.id === r.customerId);
                             const treasury = treasuries.find(t => t.id === r.treasuryId);
                             const methodLabel = r.paymentMethod === 'cash' ? 'نقدي' : r.paymentMethod === 'check' ? 'شيك' : 'خصم مسموح به';
@@ -108,6 +118,13 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
                             <div className="p-8 text-center text-gray-500">لا توجد سندات تطابق معايير البحث.</div>
                         )}
                     </div>
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-4 mt-4 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 bg-white dark:bg-gray-700 rounded-lg shadow disabled:opacity-50 font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">السابق</button>
+                            <span className="font-bold text-gray-700 dark:text-gray-300">صفحة {currentPage} من {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 bg-white dark:bg-gray-700 rounded-lg shadow disabled:opacity-50 font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">التالي</button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

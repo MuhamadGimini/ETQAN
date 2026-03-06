@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Modal, ConfirmationModal, PlusCircleIcon, EditIcon, DeleteIcon, DownloadIcon, UploadIcon, ViewIcon, DocumentIcon, FormattedNumber, ChevronDownIcon, BarcodeIcon, SwitchHorizontalIcon } from './Shared';
 import type { Item, Unit, Warehouse, NotificationType, MgmtUser, DefaultValues, SalesInvoice, SalesReturn, PurchaseInvoice, PurchaseReturn, WarehouseTransfer, CompanyData } from '../types';
 import { exportToExcel, readFromExcel } from '../services/excel';
@@ -36,6 +36,8 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
     const [filterWarehouse, setFilterWarehouse] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [isQuickEditMode, setIsQuickEditMode] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const importFileRef = useRef<HTMLInputElement>(null);
 
     // Barcode Modal State
@@ -245,6 +247,27 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
         }
     };
 
+    const filteredItems = useMemo(() => {
+        return items
+            .filter(item => filterWarehouse === 'all' || item.warehouseId === parseInt(filterWarehouse))
+            .filter(item => {
+                if (!searchQuery.trim()) return true;
+                if (item.barcode === searchQuery.trim()) return true;
+                return searchMatch(item.name, searchQuery) || searchMatch(item.barcode, searchQuery);
+            });
+    }, [items, searchQuery, filterWarehouse]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterWarehouse]);
+
+    const paginatedItems = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredItems, currentPage]);
+
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
     const handleDownloadTemplate = () => {
         const exampleUnit = units[0]?.name || 'عدد';
         const exampleWarehouse = warehouses[0]?.name || 'الفرع الرئيسي';
@@ -436,17 +459,6 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
 
         } catch (error) { showNotification('error'); }
     };
-
-    const filteredItems = useMemo(() => {
-        return items
-            .filter(item => filterWarehouse === 'all' || item.warehouseId === parseInt(filterWarehouse))
-            .filter(item => {
-                if (!searchQuery.trim()) return true;
-                if (item.barcode === searchQuery.trim()) return true;
-                return searchMatch(item.name, searchQuery);
-            })
-            .sort((a, b) => a.name.localeCompare(b.name, 'ar')); // الترتيب الأبجدي المضاف
-    }, [items, filterWarehouse, searchQuery]);
     
     const suggestedUnits = useMemo(() => {
         if (!unitSearchQuery) return units.sort((a,b) => a.name.localeCompare(b.name, 'ar'));
@@ -633,7 +645,7 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                              </tr>
                          </thead>
                          <tbody>
-                             {filteredItems.map((item) => {
+                             {paginatedItems.map((item) => {
                                  const unitName = units.find(u => u.id === item.unitId)?.name || 'غير محدد';
                                  const warehouseName = warehouses.find(w => w.id === item.warehouseId)?.name || 'غير محدد';
                                  const actualStock = calculateActualStock(item);
@@ -674,6 +686,28 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                          </tbody>
                      </table>
                  </div>
+
+                 {totalPages > 1 && (
+                     <div className="flex justify-center items-center gap-4 mt-4 p-4 border-t border-gray-200 dark:border-gray-700">
+                         <button 
+                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                             disabled={currentPage === 1} 
+                             className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                         >
+                             السابق
+                         </button>
+                         <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                             صفحة {currentPage} من {totalPages}
+                         </span>
+                         <button 
+                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                             disabled={currentPage === totalPages} 
+                             className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                         >
+                             التالي
+                         </button>
+                     </div>
+                 )}
              </div>
         </div>
         </>

@@ -69,6 +69,8 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [transferToDelete, setTransferToDelete] = useState<TreasuryTransfer | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [isViewing, setIsViewing] = useState(false);
 
     const canDelete = currentUser.permissions.includes('treasuryTransfer_delete');
@@ -91,6 +93,17 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
         return balances;
     }, [treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues]);
 
+
+    const sortedTransfers = useMemo(() => {
+        return treasuryTransfers.slice().reverse();
+    }, [treasuryTransfers]);
+
+    const paginatedTransfers = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return sortedTransfers.slice(startIndex, startIndex + itemsPerPage);
+    }, [sortedTransfers, currentPage]);
+
+    const totalPages = Math.ceil(sortedTransfers.length / itemsPerPage);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -281,7 +294,7 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
                              </tr>
                          </thead>
                          <tbody>
-                            {treasuryTransfers.slice().reverse().map(t => (
+                            {paginatedTransfers.map(t => (
                                 <tr key={t.id} className="border-b border-gray-200/50 dark:border-gray-700/50 text-gray-900 dark:text-gray-200">
                                     <td className="p-2 font-medium">{t.id}</td>
                                     <td className="p-2">{new Date(t.date).toLocaleDateString('ar-EG')}</td>
@@ -319,6 +332,28 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
                          </tbody>
                      </table>
                  </div>
+
+                 {totalPages > 1 && (
+                     <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                         <button 
+                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                             disabled={currentPage === 1} 
+                             className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                         >
+                             السابق
+                         </button>
+                         <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                             صفحة {currentPage} من {totalPages}
+                         </span>
+                         <button 
+                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                             disabled={currentPage === totalPages} 
+                             className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                         >
+                             التالي
+                         </button>
+                     </div>
+                 )}
             </div>
         </div>
     )

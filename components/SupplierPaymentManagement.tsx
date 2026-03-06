@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon, WhatsAppIcon } from './Shared';
 // consolidated import of DocToView from types
 import type { SupplierPayment, Supplier, Treasury, NotificationType, MgmtUser, PurchaseInvoice, PurchaseReturn, DefaultValues, CompanyData, CustomerReceipt, Expense, TreasuryTransfer, SalesInvoice, SalesReturn, DocToView } from '../types';
@@ -65,9 +65,12 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
     const [isViewing, setIsViewing] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState<SupplierPayment | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [supplierBalance, setSupplierBalance] = useState<number | null>(null);
     const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
     const [isSupplierSuggestionsOpen, setIsSupplierSuggestionsOpen] = useState(false);
+    const supplierDropdownRef = useRef<HTMLDivElement>(null);
     
     const [searchFilters, setSearchFilters] = useState({
         id: '',
@@ -98,8 +101,23 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
         if (formData.supplierId) {
             const supplier = suppliers.find(s => s.id === formData.supplierId);
             if (supplier) setSupplierSearchQuery(supplier.name);
-        } else setSupplierSearchQuery('');
+        } else if (!isSupplierSuggestionsOpen) {
+             setSupplierSearchQuery('');
+        }
     }, [formData.id, formData.supplierId, suppliers]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(event.target as Node)) {
+                setIsSupplierSuggestionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     useEffect(() => {
         if (formData.supplierId) {
@@ -126,9 +144,10 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
         } else setSupplierBalance(null);
     }, [formData.supplierId, formData.id, suppliers, purchaseInvoices, purchaseReturns, supplierPayments]);
 
-    const getTreasuryBalance = (treasuryId: number) => {
-        return calculateTreasuryBalance(treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, formData.id, 'supplierPayment');
-    };
+    const currentTreasuryBalance = useMemo(() => {
+        if (!formData.treasuryId) return 0;
+        return calculateTreasuryBalance(formData.treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, formData.id, 'supplierPayment');
+    }, [formData.treasuryId, formData.id, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -161,9 +180,8 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
             return;
         }
 
-        const currentBalance = getTreasuryBalance(formData.treasuryId);
-        if (formData.paymentMethod !== 'discount' && formData.amount > currentBalance) {
-            alert(`خطأ: رصيد الخزينة غير كافٍ.\nالرصيد الحالي: ${currentBalance.toFixed(2)}`);
+        if (formData.paymentMethod !== 'discount' && formData.amount > currentTreasuryBalance) {
+            alert(`خطأ: رصيد الخزينة غير كافٍ.\nالرصيد الحالي: ${currentTreasuryBalance.toFixed(2)}`);
             return;
         }
 
@@ -212,7 +230,18 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
         }).sort((a, b) => b.id - a.id);
     }, [supplierPayments, searchFilters, suppliers, treasuries]);
 
-    const filteredTotal = useMemo(() => filteredPayments.reduce((sum, p) => sum + p.amount, 0), [filteredPayments]);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchFilters]);
+
+    const paginatedPayments = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredPayments.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredPayments, currentPage]);
+
+    const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+
+    const filteredTotal = useMemo(() => paginatedPayments.reduce((sum, p) => sum + p.amount, 0), [paginatedPayments]);
 
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
     const inputClass = "h-11 w-full px-4 py-2 bg-white dark:bg-gray-800 border-2 border-teal-300 dark:border-teal-700 rounded-lg focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-black dark:text-white font-bold placeholder-gray-500 transition duration-300 disabled:opacity-70 text-base font-bold";
@@ -240,7 +269,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                             <label className={labelClass}>التاريخ</label>
                             <input type="text" {...dateInputProps} className={inputClass} disabled={isViewing || (isEditing && !canEditDate)} />
                         </div>
-                        <div className="flex-[30%] min-w-[200px] relative z-[40]">
+                        <div className="flex-[30%] min-w-[200px] relative z-[40]" ref={supplierDropdownRef}>
                             <label className={labelClass}>المورد</label>
                              <div className="relative">
                                 <input type="text" value={supplierSearchQuery} onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} placeholder="ابحث بالاسم..." className={inputClass} disabled={isViewing} autoComplete="off" />
@@ -248,7 +277,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                             </div>
                             {isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && (
                                 <ul className="absolute z-50 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg top-full">
-                                    {suggestedSuppliers.map(s => <li key={s.id} onMouseDown={() => handleSupplierSelect(s)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold text-gray-800 dark:text-gray-200 border-b last:border-0">{s.name}</li>)}
+                                    {suggestedSuppliers.slice(0, 50).map(s => <li key={s.id} onMouseDown={() => handleSupplierSelect(s)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold text-gray-800 dark:text-gray-200 border-b last:border-0">{s.name}</li>)}
                                 </ul>
                             )}
                             {supplierBalance !== null && (
@@ -303,7 +332,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                             </select>
                              {formData.treasuryId > 0 && formData.paymentMethod !== 'discount' && (
                                 <div className="absolute top-full right-0 text-xl font-black mt-1 whitespace-nowrap text-teal-800 dark:text-teal-300">
-                                    المتاح: <FormattedNumber value={getTreasuryBalance(formData.treasuryId)} />
+                                    المتاح: <FormattedNumber value={currentTreasuryBalance} />
                                 </div>
                             )}
                         </div>
@@ -369,7 +398,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredPayments.map((p) => {
+                                {paginatedPayments.map((p) => {
                                     const supplier = suppliers.find(s => s.id === p.supplierId);
                                     const treasury = treasuries.find(t => t.id === p.treasuryId);
                                     const methodLabel = p.paymentMethod === 'cash' ? 'نقدي' : p.paymentMethod === 'check' ? 'شيك' : 'خصم مكتسب';
@@ -408,6 +437,28 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                         <div className="bg-gray-50 dark:bg-gray-800 font-bold p-3 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
                             <span className="text-gray-700 dark:text-gray-300">إجمالي الصفحة:</span>
                             <span className="text-red-600 text-lg"><FormattedNumber value={filteredTotal} /></span>
+                        </div>
+                    )}
+
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                disabled={currentPage === 1} 
+                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                السابق
+                            </button>
+                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                صفحة {currentPage} من {totalPages}
+                            </span>
+                            <button 
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                disabled={currentPage === totalPages} 
+                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                التالي
+                            </button>
                         </div>
                     )}
                 </div>

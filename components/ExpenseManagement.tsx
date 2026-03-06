@@ -61,11 +61,15 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
     const [isViewing, setIsViewing] = useState<boolean>(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
 
     const [categorySearchQuery, setCategorySearchQuery] = useState('');
     const [isCategorySuggestionsOpen, setIsCategorySuggestionsOpen] = useState(false);
+    const categoryDropdownRef = useRef<HTMLDivElement>(null);
     const [treasurySearchQuery, setTreasurySearchQuery] = useState('');
     const [isTreasurySuggestionsOpen, setIsTreasurySuggestionsOpen] = useState(false);
+    const treasuryDropdownRef = useRef<HTMLDivElement>(null);
 
     // Search filters for the log
     const [searchFilters, setSearchFilters] = useState({
@@ -90,20 +94,37 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         if (formData.categoryId) {
             const cat = expenseCategories.find(c => c.id === formData.categoryId);
             if (cat) setCategorySearchQuery(cat.name);
-        } else {
+        } else if (!isCategorySuggestionsOpen) {
             setCategorySearchQuery('');
         }
         if (formData.treasuryId) {
             const t = treasuries.find(t => t.id === formData.treasuryId);
             if (t) setTreasurySearchQuery(t.name);
-        } else {
+        } else if (!isTreasurySuggestionsOpen) {
             setTreasurySearchQuery('');
         }
-    }, [formData.id, formData.categoryId, formData.treasuryId, expenseCategories, treasuries]);
+    }, [formData.categoryId, formData.treasuryId, expenseCategories, treasuries]);
 
-    const getTreasuryBalance = (treasuryId: number) => {
-        return calculateTreasuryBalance(treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, formData.id, 'expense');
-    };
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+                setIsCategorySuggestionsOpen(false);
+            }
+            if (treasuryDropdownRef.current && !treasuryDropdownRef.current.contains(event.target as Node)) {
+                setIsTreasurySuggestionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const currentTreasuryBalance = useMemo(() => {
+        if (!formData.treasuryId) return 0;
+        return calculateTreasuryBalance(formData.treasuryId, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues, formData.id, 'expense');
+    }, [formData.treasuryId, formData.id, treasuries, customerReceipts, supplierPayments, expenses, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns, defaultValues]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -119,9 +140,8 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             return;
         }
 
-        const currentBalance = getTreasuryBalance(formData.treasuryId);
-        if (formData.amount > currentBalance) {
-            alert(`خطأ: رصيد الخزينة غير كافٍ.\nالرصيد الحالي: ${currentBalance.toFixed(2)}`);
+        if (formData.amount > currentTreasuryBalance) {
+            alert(`خطأ: رصيد الخزينة غير كافٍ.\nالرصيد الحالي: ${currentTreasuryBalance.toFixed(2)}`);
             return;
         }
 
@@ -218,7 +238,18 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         }).sort((a, b) => b.id - a.id);
     }, [expenses, searchFilters, expenseCategories, treasuries]);
 
-    const filteredTotalAmount = useMemo(() => filteredExpenses.reduce((sum, e) => sum + e.amount, 0), [filteredExpenses]);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchFilters]);
+
+    const paginatedExpenses = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredExpenses.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredExpenses, currentPage]);
+
+    const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+
+    const filteredTotalAmount = useMemo(() => paginatedExpenses.reduce((sum, e) => sum + e.amount, 0), [paginatedExpenses]);
 
     const clearFilters = () => {
         setSearchFilters({ date: '', type: '', beneficiary: '', amount: '', treasury: '', notes: '' });
@@ -257,7 +288,7 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                             <label className={labelClass}>التاريخ</label>
                             <input type="text" {...dateInputProps} className={inputClass} disabled={isViewing || (isEditing && !canEditDate)} />
                         </div>
-                        <div className="flex-[14%] min-w-[150px] relative z-[40]">
+                        <div className="flex-[14%] min-w-[150px] relative z-[40]" ref={categoryDropdownRef}>
                             <label className={labelClass}>نوع المصروف</label>
                             <div className="relative">
                                 <input type="text" value={categorySearchQuery} onChange={(e) => {setCategorySearchQuery(e.target.value); setIsCategorySuggestionsOpen(true);}} onFocus={() => setIsCategorySuggestionsOpen(true)} placeholder="ابحث..." className={inputClass} required disabled={isViewing} autoComplete="off"/>
@@ -277,7 +308,7 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                             <label className={labelClass}>المبلغ</label>
                             <input ref={amountInputRef} id="amount" name="amount" type="number" step="0.01" value={isNaN(formData.amount) ? '' : formData.amount} onChange={handleInputChange} className={inputClass} required disabled={isViewing} />
                         </div>
-                        <div className="flex-[14%] min-w-[150px] relative z-[35]">
+                        <div className="flex-[14%] min-w-[150px] relative z-[35]" ref={treasuryDropdownRef}>
                             <label className={labelClass}>الخزينة</label>
                             <div className="relative">
                                 <input ref={treasuryInputRef} type="text" value={treasurySearchQuery} onChange={(e) => {setTreasurySearchQuery(e.target.value); setIsTreasurySuggestionsOpen(true);}} onFocus={() => setIsTreasurySuggestionsOpen(true)} placeholder="اختر..." className={inputClass} required disabled={isViewing} autoComplete="off"/>
@@ -291,7 +322,7 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                             {/* Treasury Balance Display */}
                             {formData.treasuryId > 0 && (
                                 <div className="absolute top-full right-0 text-xl font-black mt-1 whitespace-nowrap text-purple-800 dark:text-purple-300">
-                                    المتاح: <FormattedNumber value={getTreasuryBalance(formData.treasuryId)} />
+                                    المتاح: <FormattedNumber value={currentTreasuryBalance} />
                                 </div>
                             )}
                         </div>
@@ -381,7 +412,7 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredExpenses.map((exp) => {
+                            {paginatedExpenses.map((exp) => {
                                 const category = expenseCategories.find(c => c.id === exp.categoryId);
                                 const treasury = treasuries.find(t => t.id === exp.treasuryId);
                                 return (
@@ -420,6 +451,28 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                         )}
                     </table>
                 </div>
+
+                {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                            disabled={currentPage === 1} 
+                            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            السابق
+                        </button>
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                            صفحة {currentPage} من {totalPages}
+                        </span>
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                            disabled={currentPage === totalPages} 
+                            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            التالي
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Item, Warehouse, CompanyData, MgmtUser, NotificationType, SalesInvoice, SalesReturn, PurchaseInvoice, PurchaseReturn } from '../types';
 import { PrintIcon, Modal, ChevronDownIcon, ConfirmationModal, FormattedNumber } from './Shared';
 import { searchMatch } from '../utils';
@@ -24,6 +24,8 @@ const WarehouseInventory: React.FC<WarehouseInventoryProps> = ({ items, setItems
     const [actualCounts, setActualCounts] = useState<{ [itemName: string]: { [warehouseId: string]: number | undefined } }>({});
     const [searchQuery, setSearchQuery] = useState('');
     const [showDifferencesOnly, setSearchFiltersOnly] = useState(false); // Refactored state name for consistency internally
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
 
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [password, setPassword] = useState('');
@@ -80,6 +82,17 @@ const WarehouseInventory: React.FC<WarehouseInventoryProps> = ({ items, setItems
 
         return data;
     }, [inventoryData, searchQuery, balanceFilter, showDifferencesOnly, actualCounts, displayedWarehouses]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, balanceFilter, showDifferencesOnly, selectedWarehouseId]);
+
+    const paginatedInventoryData = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredInventoryData.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredInventoryData, currentPage]);
+
+    const totalPages = Math.ceil(filteredInventoryData.length / itemsPerPage);
     
 
     const handleCountChange = (itemName: string, warehouseId: number, value: string) => {
@@ -403,8 +416,8 @@ const WarehouseInventory: React.FC<WarehouseInventoryProps> = ({ items, setItems
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredInventoryData.length > 0 ? (
-                                filteredInventoryData.map((item, index) => {
+                            {paginatedInventoryData.length > 0 ? (
+                                paginatedInventoryData.map((item, index) => {
                                     const rowHasDifference = displayedWarehouses.some(w => {
                                         const systemStock = item.stock.get(w.id) || 0;
                                         const actualStockValue = actualCounts[item.name]?.[w.id];
@@ -472,6 +485,28 @@ const WarehouseInventory: React.FC<WarehouseInventoryProps> = ({ items, setItems
                         </tbody>
                     </table>
                 </div>
+
+                {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-4 mt-4 p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                            disabled={currentPage === 1} 
+                            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            السابق
+                        </button>
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                            صفحة {currentPage} من {totalPages}
+                        </span>
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                            disabled={currentPage === totalPages} 
+                            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg disabled:opacity-50 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            التالي
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
         </>
