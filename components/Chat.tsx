@@ -15,9 +15,21 @@ interface ChatProps {
     setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
     isLoginScreen?: boolean;
     themeColor?: string;
+    appData?: {
+        salesInvoices: any[];
+        salesReturns: any[];
+        purchaseInvoices: any[];
+        purchaseReturns: any[];
+        items: any[];
+        customers: any[];
+        suppliers: any[];
+        expenses: any[];
+        treasuries: any[];
+        warehouses: any[];
+    };
 }
 
-const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSessions, chatMessages, setChatMessages, isLoginScreen, themeColor }) => {
+const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSessions, chatMessages, setChatMessages, isLoginScreen, themeColor, appData }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [channels, setChannels] = useState<ChatChannel[]>([]);
@@ -160,7 +172,7 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
         const initialChannels: ChatChannel[] = [
             { id: 'general', name: 'عام' },
             { id: 'transactions', name: 'النظام' },
-            { id: 'support', name: 'الدعم الفني' },
+            { id: 'support', name: 'المساعد الذكي' },
             { id: 'quran', name: 'إذاعة القرآن الكريم' },
             // Only show online users
             ...activeUsers.map(s => ({ 
@@ -171,19 +183,67 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
         setChannels(initialChannels);
     }, [onlineSessions, isLoginScreen, currentUser]);
 
-    const handleAIResponse = async (userMessage: string) => {
+    const handleAIResponse = async (userMessage: string, audioData?: string) => {
         try {
             const apiKey = (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined) || import.meta.env.VITE_GEMINI_API_KEY || '';
             const ai = new GoogleGenAI({ apiKey });
             
-            const systemInstruction = `أنت مساعد ذكي للدعم الفني لبرنامج محاسبي.
-مهمتك هي الإجابة عن كيفية العمل على البرنامج مثل إصدار الفواتير، التكويد بجميع أنواعه، المصروفات، التقارير، وسندات القبض والدفع.
-إذا واجهت أي سؤال لا يمكنك الإجابة عليه، أو إذا طلب المستخدم أو الزائر التحدث مع الدعم الفني البشري، يجب عليك الرد حصراً بهذه العبارة: "للتواصل معانا والتحدث مع احد ممثلي الدعم الفني برجاء الاتصال او ارسال واتساب علي الرقم 01007608603".
-أجب باللغة العربية وبشكل احترافي ومختصر.`;
+            let dataContext = "";
+            if (appData) {
+                const totalSales = appData.salesInvoices.reduce((acc, inv) => acc + (Number(inv.paidAmount) || 0), 0);
+                const totalExpenses = appData.expenses.reduce((acc, exp) => acc + (Number(exp.amount) || 0), 0);
+                const topCustomer = [...appData.customers].sort((a, b) => {
+                    const aSales = appData.salesInvoices.filter(i => i.customerId === a.id).reduce((acc, i) => acc + (Number(i.paidAmount) || 0), 0);
+                    const bSales = appData.salesInvoices.filter(i => i.customerId === b.id).reduce((acc, i) => acc + (Number(i.paidAmount) || 0), 0);
+                    return bSales - aSales;
+                })[0];
+                
+                // Group sales by month for forecasting
+                const salesByMonth: Record<string, number> = {};
+                appData.salesInvoices.forEach(inv => {
+                    const month = inv.date.substring(0, 7); // YYYY-MM
+                    salesByMonth[month] = (salesByMonth[month] || 0) + (Number(inv.paidAmount) || 0);
+                });
+
+                dataContext = `
+بيانات البرنامج الحالية:
+- إجمالي المبيعات المحصلة: ${totalSales}
+- إجمالي المصروفات: ${totalExpenses}
+- عدد العملاء: ${appData.customers.length}
+- عدد الأصناف: ${appData.items.length}
+- أفضل عميل: ${topCustomer ? topCustomer.name : 'لا يوجد'}
+- تاريخ المبيعات الشهرية: ${JSON.stringify(salesByMonth)}
+`;
+            }
+
+            const systemInstruction = `أنت مساعد ذكي للدعم الفني وتحليل البيانات لبرنامج محاسبي.
+مهمتك هي الإجابة عن كيفية العمل على البرنامج وأيضاً تحليل البيانات المقدمة لك للإجابة على أسئلة صاحب العمل مثل "كم بلغت أرباحي؟" أو "من هو أفضل عميل؟".
+أيضاً يمكنك توقع مبيعات الشهر القادم بناءً على تاريخ المبيعات الشهرية المقدم لك.
+يمكنك أيضاً استقبال رسائل صوتية (Voice Sales) وتحويلها إلى بيانات فاتورة مبيعات إذا طلب المستخدم ذلك.
+${dataContext}
+أجب باللغة العربية وبشكل احترافي ومختصر جداً.
+إذا طلب المستخدم التحدث مع الدعم البشري، رد بـ: "للتواصل معانا والتحدث مع احد ممثلي الدعم الفني برجاء الاتصال او ارسال واتساب علي الرقم 01007608603".`;
+
+            const contents: any[] = [];
+            if (audioData) {
+                contents.push({
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: "audio/webm",
+                                data: audioData.split(',')[1]
+                            }
+                        },
+                        { text: userMessage || "قم بتحليل هذه الرسالة الصوتية وتنفيذ المطلوب" }
+                    ]
+                });
+            } else {
+                contents.push({ parts: [{ text: userMessage }] });
+            }
 
             const response = await ai.models.generateContent({
                 model: "gemini-3-flash-preview",
-                contents: userMessage,
+                contents: contents[0],
                 config: {
                     systemInstruction: systemInstruction,
                 }
@@ -193,7 +253,7 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
                 id: (Date.now() + 1).toString(),
                 channelId: 'support',
                 senderId: -2,
-                senderName: 'الدعم الفني الذكي',
+                senderName: 'المساعد الذكي',
                 text: response.text || "عذراً، حدث خطأ أثناء معالجة طلبك.",
                 timestamp: Date.now(),
             };
@@ -372,6 +432,10 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
             const safePrev = Array.isArray(prev) ? prev : [];
             return [...safePrev, message];
         });
+
+        if (activeChannelId === 'support') {
+            handleAIResponse('تحليل رسالة صوتية', audioData);
+        }
     };
 
     const handleCall = () => {

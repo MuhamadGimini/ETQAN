@@ -1,7 +1,7 @@
 {
   "name": "pos-management-system",
   "productName": "نظام إدارة نقاط البيع",
-  "version": "1.2.7",
+  "version": "1.2.9",
   "description": "نظام محاسبي وإداري متكامل لنقاط البيع والمخازن",
   "main": "main.js",
   "author": {
@@ -51,6 +51,8 @@
     "motion": "^12.34.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

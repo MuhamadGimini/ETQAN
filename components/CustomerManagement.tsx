@@ -329,6 +329,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ customers, setC
                                     <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 w-1/4">اسم العميل</th>
                                     <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">رقم الموبايل</th>
                                     <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">العنوان</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">النقاط</th>
                                     <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">رصيد أول المدة</th>
                                     <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المستخدم</th>
                                     <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">إجراءات</th>
@@ -340,6 +341,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ customers, setC
                                         <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{c.name}</td>
                                         <td className="p-3 text-gray-700 dark:text-gray-300 font-mono">{c.phone || '-'}</td>
                                         <td className="p-3 text-gray-600 dark:text-gray-400 text-sm">{c.address || '-'}</td>
+                                        <td className="p-3 text-center font-bold text-orange-600 dark:text-orange-400">{c.points || 0}</td>
                                         <td className={`p-3 font-black text-center ${c.openingBalance >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                                             <FormattedNumber value={Math.abs(c.openingBalance)} />
                                             <span className="text-[10px] mr-1 opacity-70">({c.openingBalance >= 0 ? 'عليه' : 'له'})</span>
