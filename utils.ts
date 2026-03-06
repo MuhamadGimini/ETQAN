@@ -59,9 +59,16 @@ export const formatNumberWithSmallerDecimals = (value: number | string | null | 
  * 3. Replaces special characters with spaces.
  * 4. Collapses multiple spaces into a single space.
  */
+const normalizeCache = new Map<string, string>();
+
 export const normalizeText = (text: string): string => {
     if (!text || typeof text !== 'string') return "";
-    let normalized = text.toString().toLowerCase();
+    
+    if (normalizeCache.has(text)) {
+        return normalizeCache.get(text)!;
+    }
+
+    let normalized = text.toLowerCase();
     
     // Normalize Arabic
     normalized = normalized.replace(/[أإآ]/g, 'ا');
@@ -74,6 +81,12 @@ export const normalizeText = (text: string): string => {
     // Collapse multiple spaces into one and trim
     normalized = normalized.replace(/\s+/g, ' ').trim();
     
+    if (normalizeCache.size > 10000) {
+        const firstKey = normalizeCache.keys().next().value;
+        if (firstKey) normalizeCache.delete(firstKey);
+    }
+    
+    normalizeCache.set(text, normalized);
     return normalized;
 };
 
