@@ -1,4 +1,3 @@
-
 // Item Color Balance Type
 export interface ItemColorBalance {
     color: string;
@@ -24,7 +23,6 @@ export interface Item {
     lastModifiedBy?: string;
 }
 
-// Define the rest of existing types to maintain file integrity
 export interface MgmtUser {
   id: number;
   username: string;
@@ -80,7 +78,6 @@ export interface SalesRepresentative { id: number; code: string; name: string; p
 export interface Supplier { id: number; name: string; phone: string; address: string; openingBalance: number; createdAt?: string; createdBy?: string; lastModifiedAt?: string; lastModifiedBy?: string; }
 export interface SupplierPayment { id: number; date: string; supplierId: number; treasuryId: number; amount: number; notes: string; paymentMethod: 'cash' | 'check' | 'discount'; checkNumber?: string; checkDueDate?: string; bankName?: string; checkStatus?: 'pending' | 'paid' | 'rejected'; createdAt?: string; createdBy?: string; lastModifiedAt?: string; lastModifiedBy?: string; }
 export interface SalesInvoiceItem { itemId: number; quantity: number; price: number; warehouseId?: number; }
-// Fix: changed lastModifiedAtBy to lastModifiedBy
 export interface SalesInvoice { id: number | string; date: string; customerId: number; salesRepId: number; warehouseId: number; items: SalesInvoiceItem[]; discount: number; tax: number; paidAmount: number; notes: string; type: 'credit' | 'cash'; permissionNumber?: string; createdAt?: string; createdBy?: string; lastModifiedAt?: string; lastModifiedBy?: string; }
 export interface SalesReturnItem { itemId: number; quantity: number; price: number; warehouseId?: number; }
 export interface SalesReturn { id: number | string; date: string; customerId: number; salesRepId: number; warehouseId: number; items: SalesReturnItem[]; discount: number; tax: number; paidAmount: number; notes: string; type: 'credit' | 'cash'; permissionNumber?: string; createdAt?: string; createdBy?: string; lastModifiedAt?: string; lastModifiedBy?: string; }
