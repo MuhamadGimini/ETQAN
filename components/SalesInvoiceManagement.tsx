@@ -37,7 +37,7 @@ interface SalesInvoiceManagementProps {
     purchaseReturns: PurchaseReturn[];
 }
 
-const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = ({ 
+const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo(({ 
     salesInvoices, setSalesInvoices, heldInvoices, setHeldInvoices, salesReturns, customerReceipts, setCustomerReceipts, items, setItems, customers, setCustomers,
     salesRepresentatives, warehouses, units, companyData, showNotification, docToView, onClearDocToView, currentUser, defaultValues, activeDiscounts,
     draft, setDraft, isEditing, setIsEditing, purchaseInvoices, purchaseReturns
@@ -959,6 +959,6 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = ({
             </div>
         </div>
     );
-};
+});
 
 export default SalesInvoiceManagement;

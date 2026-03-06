@@ -42,7 +42,7 @@ interface PurchaseInvoiceManagementProps {
     treasuries: Treasury[];
 }
 
-const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({ 
+const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = React.memo(({ 
     purchaseInvoices, setPurchaseInvoices, heldPurchaseInvoices, setHeldPurchaseInvoices, purchaseReturns, supplierPayments, setSupplierPayments, items, setItems, suppliers, setSuppliers,
     warehouses, units, companyData, showNotification, docToView, onClearDocToView, currentUser, defaultValues,
     draft, setDraft, isEditing, setIsEditing, salesInvoices, salesReturns, expenses, customerReceipts, treasuryTransfers, treasuries
@@ -84,7 +84,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
     };
 
     const [supplierBalance, setSupplierBalance] = useState<number | null>(null);
-    const [currentItemSelection, setCurrentItemSelection] = useState<{itemId: number, quantity: number, price: number}>({ itemId: 0, quantity: 1, price: 0 });
+    const [currentItemSelection, setCurrentItemSelection] = useState<{itemId: number, quantity: number, price: number, warehouseId: number}>({ itemId: 0, quantity: 1, price: 0, warehouseId: 0 });
     const [itemSearchQuery, setItemSearchQuery] = useState('');
     const [isItemSuggestionsOpen, setIsItemSuggestionsOpen] = useState(false);
     const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
@@ -177,7 +177,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
 
     const handleItemSelect = (item: Item) => {
         setItemSearchQuery(item.name);
-        setCurrentItemSelection({ quantity: 1, itemId: item.id, price: item.purchasePrice });
+        setCurrentItemSelection({ quantity: 1, itemId: item.id, price: item.purchasePrice, warehouseId: item.warehouseId || newInvoice.warehouseId });
         setIsItemSuggestionsOpen(false);
     };
 
@@ -197,9 +197,14 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
         const itemToAdd = items.find(i => i.id === currentItemSelection.itemId);
         if (itemToAdd) {
             if (newInvoice.items.some(i => i.itemId === itemToAdd.id)) { alert("الصنف مضاف بالفعل"); return; }
-            const newItem: PurchaseInvoiceItem = { itemId: itemToAdd.id, quantity: currentItemSelection.quantity, price: currentItemSelection.price };
+            const newItem: PurchaseInvoiceItem = { 
+                itemId: itemToAdd.id, 
+                quantity: currentItemSelection.quantity, 
+                price: currentItemSelection.price,
+                warehouseId: currentItemSelection.warehouseId || newInvoice.warehouseId
+            };
             setNewInvoice((prev: any) => ({ ...prev, items: [...prev.items, newItem] }));
-            setCurrentItemSelection({ itemId: 0, quantity: 1, price: 0 });
+            setCurrentItemSelection({ itemId: 0, quantity: 1, price: 0, warehouseId: 0 });
             setItemSearchQuery('');
             itemSearchInputRef.current?.focus();
         }
@@ -209,7 +214,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
         setNewInvoice((prev: any) => ({ ...prev, items: prev.items.filter((i: any) => i.itemId !== itemId) }));
     };
 
-    const handleItemChange = (itemId: number, field: 'quantity' | 'price', value: number) => { setNewInvoice((prev: any) => ({ ...prev, items: prev.items.map((item: any) => item.itemId === itemId ? { ...item, [field]: value } : item ) })); };
+    const handleItemChange = (itemId: number, field: 'quantity' | 'price' | 'warehouseId', value: number) => { setNewInvoice((prev: any) => ({ ...prev, items: prev.items.map((item: any) => item.itemId === itemId ? { ...item, [field]: value } : item ) })); };
 
     const closeAllDropdowns = () => { setIsItemSuggestionsOpen(false); setIsSupplierSuggestionsOpen(false); setIsWarehouseSuggestionsOpen(false); };
     const openDropdown = (type: 'item' | 'supplier' | 'warehouse') => { closeAllDropdowns(); if (type === 'item') setIsItemSuggestionsOpen(true); if (type === 'supplier') setIsSupplierSuggestionsOpen(true); if (type === 'warehouse') setIsWarehouseSuggestionsOpen(true); };
@@ -257,8 +262,14 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
         if (!newInvoice.supplierId || newInvoice.items.length === 0) { alert("بيانات ناقصة."); return; }
         let updatedItems = [...items];
         const originalInvoice = isEditing ? purchaseInvoices.find(inv => inv.id === newInvoice.id) : null;
-        if (originalInvoice) originalInvoice.items.forEach(oldItem => { const idx = updatedItems.findIndex(i => i.id === oldItem.itemId); if (idx > -1) updatedItems[idx] = { ...updatedItems[idx], openingBalance: updatedItems[idx].openingBalance - oldItem.quantity }; });
-        newInvoice.items.forEach(newItem => { const idx = updatedItems.findIndex(i => i.id === newItem.itemId); if (idx > -1) updatedItems[idx] = { ...updatedItems[idx], openingBalance: updatedItems[idx].openingBalance + newItem.quantity, purchasePrice: newItem.price }; });
+        if (originalInvoice) originalInvoice.items.forEach(oldItem => { 
+            const idx = updatedItems.findIndex(i => i.id === oldItem.itemId); 
+            if (idx > -1) updatedItems[idx] = { ...updatedItems[idx], openingBalance: updatedItems[idx].openingBalance - oldItem.quantity }; 
+        });
+        newInvoice.items.forEach(newItem => { 
+            const idx = updatedItems.findIndex(i => i.id === newItem.itemId); 
+            if (idx > -1) updatedItems[idx] = { ...updatedItems[idx], openingBalance: updatedItems[idx].openingBalance + newItem.quantity, purchasePrice: newItem.price, warehouseId: newItem.warehouseId || updatedItems[idx].warehouseId }; 
+        });
         setItems(updatedItems);
         
         const finalizedId = typeof newInvoice.id === 'string' && newInvoice.id.startsWith('GRN-') ? getNextInvoiceId() : newInvoice.id;
@@ -599,7 +610,6 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
                                 </div>
                                 {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.map(w => <li key={w.id} onMouseDown={() => { setNewInvoice(p=>({...p, warehouseId: w.id})); setWarehouseSearchQuery(w.name); setIsWarehouseSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
                              </div>
-                              <div className="lg:col-span-2"><label className={labelClass}>التاريخ</label><input type="text" {...dateInputProps} className={inputClass} disabled={isEditing && !canEditDate} /></div>
                              <div className="lg:col-span-2 relative">
                                 <label className={labelClass}>النوع</label>
                                 <select value={newInvoice.type} onChange={(e) => setNewInvoice(p=>({...p, type: e.target.value}))} className={inputClass}>
@@ -613,6 +623,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
                                      </div>
                                 )}
                              </div>
+                             <div className="lg:col-span-2"><label className={labelClass}>التاريخ</label><input type="text" {...dateInputProps} className={inputClass} disabled={isEditing && !canEditDate} /></div>
                         </div>
 
                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start p-4 border rounded-lg bg-black/5 dark:bg-white/5 mt-6 border-emerald-200 pb-12">
@@ -689,7 +700,15 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
                                 <tr key={invItem.itemId} className="border-b hover:bg-emerald-50/30 transition-colors text-sm font-bold">
                                     <td className="p-2 text-center text-xs font-mono dark:text-gray-300">{itemData.barcode}</td>
                                     <td className="p-2 text-right dark:text-gray-200">{itemData.name}</td>
-                                    <td className="p-2 text-center text-xs text-blue-600 dark:text-blue-400">{warehouseName}</td>
+                                    <td className="p-2 text-center">
+                                        <select 
+                                            value={invItem.warehouseId || itemData.warehouseId} 
+                                            onChange={(e) => handleItemChange(invItem.itemId, 'warehouseId', +e.target.value)}
+                                            className="w-full text-center border-2 border-gray-200 rounded font-bold dark:bg-gray-700 dark:text-white text-xs"
+                                        >
+                                            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                        </select>
+                                    </td>
                                     <td className="p-2 text-center text-blue-600">{getAvailableStock(itemData.id)}</td>
                                     <td className="p-2 text-center"><input type="number" min="1" value={invItem.quantity} onChange={(e) => handleItemChange(invItem.itemId, 'quantity', +e.target.value)} className="w-full text-center border-2 border-gray-200 rounded font-bold dark:bg-gray-700 dark:text-white" /></td>
                                     <td className="p-2 text-center"><input type="number" min="0" step="0.01" value={invItem.price} onChange={(e) => handleItemChange(invItem.itemId, 'price', +e.target.value)} className="w-full text-center border-2 border-gray-200 rounded font-bold dark:bg-gray-700 dark:text-white" /></td>
@@ -786,6 +805,6 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = ({
             </div>
         </div>
     );
-};
+});
 
 export default PurchaseInvoiceManagement;

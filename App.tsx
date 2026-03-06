@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import TopNav from './components/TopNav';
 import Login from './components/Login';
 import DashboardHome from './components/DashboardHome';
@@ -58,6 +58,10 @@ import Attendance from './components/Attendance';
 import EmployeeManagement from './components/EmployeeManagement';
 import DepartmentManagement from './components/DepartmentManagement';
 import Chat from './components/Chat';
+import VoucherRegister from './components/VoucherRegister';
+import CustomerReceiptRegister from './components/CustomerReceiptRegister';
+import SupplierPaymentRegister from './components/SupplierPaymentRegister';
+import ChequeCalendar from './components/ChequeCalendar';
 import { menuItems, ALL_PERMISSIONS } from './components/navigation';
 import { initFirebase, writeToDb, subscribeToDb } from './services/firebase';
 import { initDB, getTableData, saveTableData, saveSingleRow, resetDB } from './services/db';
@@ -191,23 +195,42 @@ const App: React.FC = () => {
     useEffect(() => {
         if (!isDBReady) return;
         const isRemote = isRemoteUpdate.current;
-        let savePromise = Array.isArray(storedValue) ? saveTableData(tableName, storedValue) : saveSingleRow(tableName, storedValue);
-        savePromise.then(() => {
-            if (!isRemote) {
-                // Broadcast local changes to other tabs
-                broadcastChannel.current?.postMessage({ type: 'UPDATE', payload: storedValue });
-            }
-            if (isCloudConnected && !isRemote && hasSyncedWithCloud.current) {
-                writeToDb(effectiveDbId, tableName, storedValue);
-            }
-        });
+        
+        // Debounce saving to IndexedDB and Cloud to prevent lag during rapid updates
+        const timeoutId = setTimeout(() => {
+            let savePromise = Array.isArray(storedValue) ? saveTableData(tableName, storedValue) : saveSingleRow(tableName, storedValue);
+            savePromise.then(() => {
+                if (!isRemote) {
+                    // Broadcast local changes to other tabs
+                    broadcastChannel.current?.postMessage({ type: 'UPDATE', payload: storedValue });
+                }
+                if (isCloudConnected && !isRemote && hasSyncedWithCloud.current) {
+                    writeToDb(effectiveDbId, tableName, storedValue);
+                }
+            });
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
     }, [storedValue, tableName, isDBReady, isCloudConnected, effectiveDbId]);
 
     return [storedValue, setStoredValue];
   };
 
   const defaultCompanyData: CompanyData = { name: 'اسم الشركة', cr: '', tr: '', phone1: '', phone2: '', address: '' };
-  const defaultDefaultValues: DefaultValues = { defaultWarehouseId: 1, defaultUnitId: 1, defaultSalesRepId: 0, defaultTreasuryId: 1, defaultPaymentMethodInvoices: 'credit', defaultPaymentMethodReceipts: 'cash', invoiceFooter: '', whatsappFooter: '', enableBackupAlert: true, backgroundImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop', backgroundOpacity: 0.6 };
+  const defaultDefaultValues: DefaultValues = { 
+    defaultWarehouseId: 1, 
+    defaultUnitId: 1, 
+    defaultSalesRepId: 0, 
+    defaultTreasuryId: 1, 
+    defaultPaymentMethodInvoices: 'credit', 
+    defaultPaymentMethodReceipts: 'cash', 
+    invoiceFooter: '', 
+    whatsappFooter: '', 
+    enableBackupAlert: true, 
+    backgroundImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop', 
+    backgroundOpacity: 0.6,
+    githubRepo: 'MuhamadGimini/ETQAN'
+  };
 
   const [databases, setDatabases] = useSyncedState<DatabaseProfile[]>('databases', [{ id: '', name: 'البيانات الرئيسية (السحابة)' }], 'SYSTEM_METADATA');
   const [users, setUsers] = useSyncedState<MgmtUser[]>('users', []);
@@ -250,6 +273,33 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isLoggedIn) return;
+
+      // Shortcuts
+      const shortcuts: Record<string, string> = {
+        'F2': 'salesInvoice',
+        'F3': 'purchaseInvoice',
+        'F4': 'salesReturn',
+        'F5': 'purchaseReturn',
+        'F6': 'customerReceipt',
+        'F7': 'supplierPayment',
+        'F8': 'expenseManagement',
+        'F9': 'itemSearch',
+        'F10': 'dashboard',
+      };
+
+      if (shortcuts[e.key]) {
+        e.preventDefault();
+        setCurrentView(shortcuts[e.key]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoggedIn]);
   const [currentUser, setCurrentUser] = useState<MgmtUser | null>(null);
   const [docToView, setDocToView] = useState<DocToView>(null);
   const [preselectedCustomer, setPreselectedCustomer] = useState<number | null>(null);
@@ -377,6 +427,21 @@ const App: React.FC = () => {
   const handleLogin = (user: MgmtUser) => {
     setCurrentUser(user);
     setIsLoggedIn(true);
+    
+    // Log login event
+    const loginMessage: ChatMessage = {
+        id: Date.now().toString(),
+        channelId: 'transactions',
+        senderId: user.id,
+        senderName: user.fullName,
+        text: `تسجيل دخول المستخدم: ${user.fullName}`,
+        timestamp: Date.now(),
+    };
+    setChatMessages(prev => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return [...safePrev, loginMessage];
+    });
+
     if (!isSetupComplete) {
       setCurrentView('initialSetup');
     } else {
@@ -434,20 +499,20 @@ const App: React.FC = () => {
     }
   };
 
-  const renderCurrentView = () => {
+  const renderedView = useMemo(() => {
     switch (currentView) {
       case 'initialSetup': return <InitialSetup onChoice={handleInitialSetupChoice} />;
       case 'dashboard': return <DashboardHome setCurrentView={setCurrentView} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} customers={customers} customerReceipts={customerReceipts} items={items} expenses={expenses} expenseCategories={expenseCategories} suppliers={suppliers} supplierPayments={supplierPayments} treasuries={treasuries} treasuryTransfers={treasuryTransfers} warehouses={warehouses} defaultValues={defaultValues} />;
       case 'userManagement': return <UserManagement users={users} setUsers={setUsers} showNotification={showNotification} currentUser={currentUser!} employees={employees} />;
       case 'userPermissions': return <UserPermissions users={users} setUsers={setUsers} showNotification={showNotification} />;
       case 'companySettings': return <CompanySettings companyData={companyData} setCompanyData={setCompanyData} showNotification={showNotification} />;
-      case 'departmentManagement': return <DepartmentManagement departments={departments} setDepartments={setDepartments} />;
+      case 'departmentManagement': return <DepartmentManagement departments={departments} setDepartments={setDepartments} currentUser={currentUser} />;
       case 'cloudSettings': return <CloudSettings firebaseConfig={firebaseConfig} setFirebaseConfig={setFirebaseConfig} showNotification={showNotification} />;
       case 'defaultValues': return <DefaultValuesComponent defaultValues={defaultValues} setDefaultValues={setDefaultValues} warehouses={warehouses} units={units} salesRepresentatives={salesRepresentatives} treasuries={treasuries} showNotification={showNotification} />;
       case 'backupSettings': return <BackupSettings appData={{users, companyData, warehouses, units, items, treasuries, expenseCategories, expenses, customers, customerReceipts, salesRepresentatives, suppliers, supplierPayments, salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, warehouseTransfers, treasuryTransfers, defaultValues, activeDiscounts, selectedDiscountItems, importCalculatorHistory, employees, departments, attendanceRecords, salaryRecords}} onRestore={handleRestoreAppData} showNotification={showNotification} databases={databases} setDatabases={setDatabases} activeDatabaseId={activeDatabaseId} setActiveDatabaseId={activeDatabaseIdSet} allDataKeys={[]} />;
       case 'factoryReset': return <FactoryReset onConfirmReset={() => resetDB()} />;
       case 'settingsActivation': return <SettingsActivation licenseStatus={licenseStatus} />;
-      case 'updateManagement': return <UpdateManagement licenseStatus={licenseStatus} latestVersion={latestVersion} downloadUrl={downloadUrl} releaseNotes={releaseNotes} />;
+      case 'updateManagement': return <UpdateManagement licenseStatus={licenseStatus} latestVersion={latestVersion} downloadUrl={downloadUrl} releaseNotes={releaseNotes} onNavigate={setCurrentView} />;
       case 'warehouseManagement': return <WarehouseManagement warehouses={warehouses} setWarehouses={setWarehouses} items={items} setItems={setItems} showNotification={showNotification} currentUser={currentUser!} employees={employees} />;
       case 'unitManagement': return <UnitManagement units={units} setUnits={setUnits} items={items} setItems={setItems} showNotification={showNotification} currentUser={currentUser!} />;
       case 'itemManagement': return <ItemManagement items={items} setItems={setItems} units={units} warehouses={warehouses} showNotification={showNotification} currentUser={currentUser!} defaultValues={defaultValues} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} warehouseTransfers={warehouseTransfers} companyData={companyData} />;
@@ -465,6 +530,7 @@ const App: React.FC = () => {
       case 'purchaseReturn': return <PurchaseReturnManagement purchaseReturns={purchaseReturns} setPurchaseReturns={setPurchaseReturns} purchaseInvoices={purchaseInvoices} supplierPayments={supplierPayments} items={items} setItems={setItems} suppliers={suppliers} warehouses={warehouses} units={units} companyData={companyData} showNotification={showNotification} docToView={docToView} onClearDocToView={() => setDocToView(null)} currentUser={currentUser!} defaultValues={defaultValues} draft={purchaseReturnDraft} setDraft={setPurchaseReturnDraft} isEditing={purchaseReturnIsEditing} setIsEditing={setPurchaseReturnIsEditing} salesInvoices={salesInvoices} salesReturns={salesReturns} customerReceipts={customerReceipts} setCustomerReceipts={setCustomerReceipts} expenses={expenses} treasuryTransfers={treasuryTransfers} treasuries={treasuries} />;
       case 'warehouseTransfer': return <WarehouseTransferManagement warehouseTransfers={warehouseTransfers} setWarehouseTransfers={setWarehouseTransfers} items={items} setItems={setItems} warehouses={warehouses} units={units} showNotification={showNotification} currentUser={currentUser!} draft={warehouseTransferDraft} setDraft={setWarehouseTransferDraft} isEditing={warehouseTransferIsEditing} setIsEditing={setWarehouseTransferIsEditing} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} defaultValues={defaultValues} />;
       case 'treasuryTransfer': return <TreasuryTransferManagement treasuryTransfers={treasuryTransfers} setTreasuryTransfers={setTreasuryTransfers} treasuries={treasuries} showNotification={showNotification} currentUser={currentUser!} customerReceipts={customerReceipts} supplierPayments={supplierPayments} expenses={expenses} salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} defaultValues={defaultValues} draft={treasuryTransferDraft} setDraft={setTreasuryTransferDraft} isEditing={treasuryTransferIsEditing} setIsEditing={setTreasuryTransferIsEditing} />;
+      case 'chequeCalendar': return <ChequeCalendar customerReceipts={customerReceipts} supplierPayments={supplierPayments} customers={customers} suppliers={suppliers} />;
       case 'importCostCalculator': return <ImportCostCalculator companyData={companyData} items={items} setItems={setItems} units={units} warehouses={warehouses} defaultValues={defaultValues} showNotification={showNotification} purchaseInvoices={purchaseInvoices} setPurchaseInvoices={setPurchaseInvoices} suppliers={suppliers} setSuppliers={setSuppliers} currentUser={currentUser!} savedMessages={importCalculatorHistory} setSavedMessages={setImportCalculatorHistory} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} />;
       case 'warehouseInventory': return <WarehouseInventory items={items} setItems={setItems} warehouses={warehouses} companyData={companyData} users={users} showNotification={showNotification} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} />;
       case 'itemsInWarehouses': return <ItemsInWarehouses items={items} warehouses={warehouses} companyData={companyData} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} />;
@@ -480,6 +546,9 @@ const App: React.FC = () => {
       case 'allSalesRepsStatement': return <AllSalesRepsStatement salesRepresentatives={salesRepresentatives} salesInvoices={salesInvoices} salesReturns={salesReturns} onViewSalesRepStatement={(repId, startDate, endDate) => { setPreselectedSalesRep({ repId, startDate, endDate }); setCurrentView('salesRepStatement'); }} />;
       case 'itemMovement': return <ItemMovement items={items} warehouses={warehouses} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} warehouseTransfers={warehouseTransfers} companyData={companyData} onViewDoc={(view, id) => { setDocToView({ view, docId: id }); setCurrentView(view); }} defaultValues={defaultValues} customers={customers} suppliers={suppliers} />;
       case 'dailyLedger': return <DailyLedger salesInvoices={salesInvoices} salesReturns={salesReturns} expenses={expenses} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} customerReceipts={customerReceipts} supplierPayments={supplierPayments} treasuryTransfers={treasuryTransfers} expenseCategories={expenseCategories} treasuries={treasuries} defaultValues={defaultValues} />;
+      case 'voucherRegister': return <VoucherRegister customerReceipts={customerReceipts} supplierPayments={supplierPayments} expenses={expenses} treasuryTransfers={treasuryTransfers} customers={customers} suppliers={suppliers} expenseCategories={expenseCategories} treasuries={treasuries} />;
+      case 'customerReceiptRegister': return <CustomerReceiptRegister customerReceipts={customerReceipts} customers={customers} treasuries={treasuries} companyData={companyData} />;
+      case 'supplierPaymentRegister': return <SupplierPaymentRegister supplierPayments={supplierPayments} suppliers={suppliers} treasuries={treasuries} companyData={companyData} />;
       case 'expenseReport': return <ExpenseReport expenses={expenses} expenseCategories={expenseCategories} treasuries={treasuries} companyData={companyData} defaultValues={defaultValues} />;
       case 'incomeStatement': return <IncomeStatement salesInvoices={salesInvoices} salesReturns={salesReturns} expenses={expenses} items={items} companyData={companyData} defaultValues={defaultValues} expenseCategories={expenseCategories} />;
       case 'weeklyReport': return <WeeklyReport salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} customerReceipts={customerReceipts} items={items} companyData={companyData} defaultValues={defaultValues} />;
@@ -493,7 +562,18 @@ const App: React.FC = () => {
       
       default: return <div>View not found</div>;
     }
-  };
+  }, [
+    currentView, salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, expenses, customers, suppliers, items,
+    users, currentUser, employees, departments, companyData, firebaseConfig, defaultValues, warehouses, units, salesRepresentatives, treasuries,
+    databases, activeDatabaseId, latestVersion, downloadUrl, releaseNotes, expenseCategories, customerReceipts, supplierPayments,
+    warehouseTransfers, treasuryTransfers, activeDiscounts, selectedDiscountItems, importCalculatorHistory, attendanceRecords, salaryRecords,
+    docToView, preselectedCustomer, preselectedSupplier, preselectedSalesRep, salesInvoiceDraft, salesInvoiceIsEditing,
+    salesReturnDraft, salesReturnIsEditing, purchaseInvoiceDraft, purchaseInvoiceIsEditing, purchaseReturnDraft, purchaseReturnIsEditing,
+    expenseDraft, expenseIsEditing, customerReceiptDraft, customerReceiptIsEditing, supplierPaymentDraft, supplierPaymentIsEditing,
+    warehouseTransferDraft, warehouseTransferIsEditing, treasuryTransferDraft, treasuryTransferIsEditing, updateAvailable, isDBReady, isCloudConnected
+  ]);
+
+  const renderCurrentView = () => renderedView;
 
   const currentViewLabel = menuItems.reduce((acc, item) => {
       if (item.id === currentView) return item.label;

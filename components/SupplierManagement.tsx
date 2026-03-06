@@ -57,6 +57,7 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ suppliers, setS
                 lastModifiedAt: new Date().toISOString()
             } : s));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات المورد "${formData.name}"` }));
         } else {
             const newSupplier: Supplier = {
                 id: Date.now(),
@@ -69,6 +70,7 @@ const SupplierManagement: React.FC<SupplierManagementProps> = ({ suppliers, setS
             };
             setSuppliers([...suppliers, newSupplier]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة مورد جديد "${newSupplier.name}"` }));
         }
         resetForm();
     };

@@ -73,7 +73,7 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
 
     const [isViewing, setIsViewing] = useState(false);
     const [customerBalance, setCustomerBalance] = useState<number | null>(null);
-    const [currentItemSelection, setCurrentItemSelection] = useState<{itemId: number, quantity: number, price: number}>({ itemId: 0, quantity: 1, price: 0 });
+    const [currentItemSelection, setCurrentItemSelection] = useState<{itemId: number, quantity: number, price: number, warehouseId: number}>({ itemId: 0, quantity: 1, price: 0, warehouseId: 0 });
     
     const [itemSearchQuery, setItemSearchQuery] = useState('');
     const [isItemSuggestionsOpen, setIsItemSuggestionsOpen] = useState(false);
@@ -271,7 +271,7 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
 
     const handleItemSelect = (item: Item) => {
         setItemSearchQuery(item.name);
-        setCurrentItemSelection({ quantity: 1, itemId: item.id, price: item.sellPrice });
+        setCurrentItemSelection({ quantity: 1, itemId: item.id, price: item.sellPrice, warehouseId: item.warehouseId || newReturn.warehouseId });
         setIsItemSuggestionsOpen(false);
     };
 
@@ -280,15 +280,20 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
         const itemToAdd = items.find(i => i.id === currentItemSelection.itemId);
         if (itemToAdd) {
             if (newReturn.items.some(i => i.itemId === itemToAdd.id)) { alert("الصنف مضاف بالفعل"); return; }
-            const newItem: SalesReturnItem = { itemId: itemToAdd.id, quantity: currentItemSelection.quantity, price: currentItemSelection.price };
+            const newItem: SalesReturnItem = { 
+                itemId: itemToAdd.id, 
+                quantity: currentItemSelection.quantity, 
+                price: currentItemSelection.price,
+                warehouseId: currentItemSelection.warehouseId || newReturn.warehouseId
+            };
             setNewReturn((prev: any) => ({ ...prev, items: [...prev.items, newItem] }));
-            setCurrentItemSelection({ itemId: 0, quantity: 1, price: 0 });
+            setCurrentItemSelection({ itemId: 0, quantity: 1, price: 0, warehouseId: 0 });
             setItemSearchQuery('');
             itemSearchInputRef.current?.focus();
         }
     };
 
-    const handleItemChange = (itemId: number, field: 'quantity' | 'price', value: number) => {
+    const handleItemChange = (itemId: number, field: 'quantity' | 'price' | 'warehouseId', value: number) => {
         setNewReturn((prev: any) => ({ ...prev, items: prev.items.map((item: any) => item.itemId === itemId ? { ...item, [field]: value } : item ) }));
     };
 
@@ -312,8 +317,19 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                 returnToSave.paidAmount = 0;
             }
 
-            if (isEditing) { const updatedReturn = { ...returnToSave, lastModifiedBy: currentUser.username, lastModifiedAt: new Date().toISOString() }; setSalesReturns(prev => prev.map(inv => inv.id === returnToSave.id ? updatedReturn : inv)); showNotification('edit'); if (printAfterSave) handlePrint(updatedReturn); }
-            else { const createdReturn = { ...returnToSave, createdBy: currentUser.username, createdAt: new Date().toISOString() }; setSalesReturns(prev => [...prev, createdReturn]); showNotification('add'); if (printAfterSave) handlePrint(createdReturn); }
+            if (isEditing) { 
+                const updatedReturn = { ...returnToSave, lastModifiedBy: currentUser.username, lastModifiedAt: new Date().toISOString() }; 
+                setSalesReturns(prev => prev.map(inv => inv.id === returnToSave.id ? updatedReturn : inv)); 
+                showNotification('edit'); 
+                if (printAfterSave) handlePrint(updatedReturn);
+                window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل مرتجع مبيعات رقم ${updatedReturn.id} للعميل ${customers.find(c => c.id === updatedReturn.customerId)?.name || ''}` }));
+            } else { 
+                const createdReturn = { ...returnToSave, createdBy: currentUser.username, createdAt: new Date().toISOString() }; 
+                setSalesReturns(prev => [...prev, createdReturn]); 
+                showNotification('add'); 
+                if (printAfterSave) handlePrint(createdReturn);
+                window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإنشاء مرتجع مبيعات رقم ${createdReturn.id} للعميل ${customers.find(c => c.id === createdReturn.customerId)?.name || ''}` }));
+            }
             resetForm();
         } catch (error) { alert("حدث خطأ أثناء الحفظ."); }
     };
@@ -682,6 +698,7 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                              <tr>
                                  <th className="p-2 text-sm font-bold text-center" style={{ width: '10%' }}>الباركود</th>
                                  <th className="p-2 text-sm font-bold text-right" style={{ width: '30%' }}>الصنف</th>
+                                 <th className="p-2 text-sm font-bold text-center" style={{ width: '15%' }}>المخزن</th>
                                  <th className="p-2 text-sm font-bold text-center" style={{ width: '10%' }}>المتاح</th>
                                  <th className="p-2 text-sm font-bold text-center" style={{ width: '10%' }}>الكمية</th>
                                  <th className="p-2 text-sm font-bold text-center" style={{ width: '13%' }}>السعر</th>
@@ -696,6 +713,16 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                                 <tr key={invItem.itemId} className="border-b hover:bg-red-50/30 transition-colors text-sm font-bold">
                                     <td className="p-2 text-center text-xs font-mono dark:text-gray-300">{itemData.barcode}</td>
                                     <td className="p-2 text-right dark:text-gray-200">{itemData.name}</td>
+                                    <td className="p-2 text-center">
+                                        <select 
+                                            value={invItem.warehouseId || itemData.warehouseId} 
+                                            onChange={(e) => handleItemChange(invItem.itemId, 'warehouseId', +e.target.value)}
+                                            disabled={isViewing}
+                                            className="w-full text-center border-2 border-gray-200 rounded font-bold dark:bg-gray-700 dark:text-white text-xs"
+                                        >
+                                            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                        </select>
+                                    </td>
                                     <td className="p-2 text-center text-blue-600">{getAvailableStock(itemData.id)}</td>
                                     <td className="p-2 text-center">
                                         {!isViewing ? (

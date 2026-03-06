@@ -84,6 +84,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
     const canEditDate = currentUser.permissions.includes('supplierPayment_editDate');
     
     const dateInputProps = useDateInput(formData.date, (d) => setFormData((prev: any) => ({ ...prev, date: d })));
+    const checkDateInputProps = useDateInput(formData.checkDueDate || '', (d) => setFormData((prev: any) => ({ ...prev, checkDueDate: d })));
 
     useEffect(() => {
         if (docToView && docToView.view === 'supplierPayment') {
@@ -170,10 +171,12 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
             if (!canEdit) { alert("ليس لديك صلاحية التعديل."); return; }
             setSupplierPayments(prev => prev.map(p => p.id === formData.id ? { ...p, ...formData, id: formData.id!, lastModifiedBy: currentUser.username, lastModifiedAt: new Date().toISOString() } : p));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل سند دفع رقم ${formData.id} للمورد ${suppliers.find(s => s.id === formData.supplierId)?.name || ''} بمبلغ ${formData.amount}` }));
         } else {
             const newPayment: SupplierPayment = { ...formData, id: getNextId(), createdAt: new Date().toISOString(), createdBy: currentUser.username };
             setSupplierPayments(prev => [...prev, newPayment]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإنشاء سند دفع رقم ${newPayment.id} للمورد ${suppliers.find(s => s.id === formData.supplierId)?.name || ''} بمبلغ ${formData.amount}` }));
         }
         resetForm();
     };
@@ -264,6 +267,30 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                                 <option value="discount">خصم مكتسب</option>
                             </select>
                         </div>
+                        {formData.paymentMethod === 'check' && (
+                            <>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>رقم الشيك</label>
+                                    <input type="text" name="checkNumber" value={formData.checkNumber || ''} onChange={handleInputChange} className={inputClass} disabled={isViewing} placeholder="رقم الشيك" />
+                                </div>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>تاريخ الاستحقاق</label>
+                                    <input type="text" {...checkDateInputProps} className={inputClass} disabled={isViewing} placeholder="YYYY-MM-DD" />
+                                </div>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>اسم البنك</label>
+                                    <input type="text" name="bankName" value={formData.bankName || ''} onChange={handleInputChange} className={inputClass} disabled={isViewing} placeholder="اسم البنك" />
+                                </div>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>حالة الشيك</label>
+                                    <select name="checkStatus" value={formData.checkStatus || 'pending'} onChange={handleInputChange} className={inputClass} disabled={isViewing}>
+                                        <option value="pending">تحت التحصيل</option>
+                                        <option value="paid">تم الصرف</option>
+                                        <option value="rejected">مرفوض</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
                         <div className="flex-[14%] min-w-[100px]">
                              <label className={labelClass}>المبلغ</label>
                              <input type="number" name="amount" min="0" step="0.01" value={isNaN(formData.amount) ? '' : formData.amount} onChange={handleInputChange} className={inputClass} required disabled={isViewing} />
@@ -326,64 +353,63 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-right">
-                        <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                            <tr>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">رقم السند</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">التاريخ</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">اسم المورد</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">طريقة الدفع</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المبلغ</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">الخزينة</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المستخدم</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredPayments.map((p) => {
-                                const supplier = suppliers.find(s => s.id === p.supplierId);
-                                const treasury = treasuries.find(t => t.id === p.treasuryId);
-                                const methodLabel = p.paymentMethod === 'cash' ? 'نقدي' : p.paymentMethod === 'check' ? 'شيك' : 'خصم مكتسب';
-                                return (
-                                    <tr key={p.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-teal-50 dark:hover:bg-teal-900/10 transition-colors">
-                                        <td className="p-3 font-bold text-teal-600">{p.id}</td>
-                                        <td className="p-3 text-gray-600 dark:text-gray-400">{new Date(p.date).toLocaleDateString('ar-EG')}</td>
-                                        <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{supplier?.name}</td>
-                                        <td className="p-3 text-gray-700 dark:text-gray-300 text-sm">{methodLabel}</td>
-                                        <td className="p-3 font-bold text-red-600"><FormattedNumber value={p.amount} /></td>
-                                        <td className="p-3 text-gray-600 dark:text-gray-400">{treasury?.name || '-'}</td>
-                                        <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.createdBy || '-'}</td>
-                                        <td className="p-3">
-                                            <div className="flex justify-center gap-2">
-                                                <button onClick={() => handleEdit(p, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
-                                                <button onClick={() => handleEdit(p, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
-                                                <button onClick={() => {
-                                                    const supplier = suppliers.find(s => s.id === p.supplierId);
-                                                    const phoneNumber = formatPhoneNumberForWhatsApp(supplier?.phone || '');
-                                                    const text = `سند دفع رقم: ${p.id}%0Aالتاريخ: ${formatDateForDisplay(p.date)}%0Aالمورد: ${supplier?.name || ''}%0Aالمبلغ: ${formatNumber(p.amount)}${defaultValues.whatsappFooter ? '%0A' + encodeURIComponent(defaultValues.whatsappFooter) : ''}`;
-                                                    window.open(phoneNumber ? `https://wa.me/${phoneNumber}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
-                                                }} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="واتساب"><WhatsAppIcon /></button>
-                                                {canDelete && <button onClick={() => handleDelete(p)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {filteredPayments.length === 0 && (
-                                <tr><td colSpan={8} className="p-8 text-center text-gray-500">لا توجد سندات تطابق معايير البحث.</td></tr>
-                            )}
-                        </tbody>
-                        {filteredPayments.length > 0 && (
-                            <tfoot className="bg-gray-50 dark:bg-gray-800 font-bold">
+                <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col">
+                    <div className="overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-teal-500 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                        <table className="w-full text-right border-collapse">
+                            <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <td colSpan={4} className="p-3 text-left">إجمالي الصفحة:</td>
-                                    <td className="p-3 text-red-600 text-lg"><FormattedNumber value={filteredTotal} /></td>
-                                    <td colSpan={3}></td>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">رقم السند</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">التاريخ</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">اسم المورد</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">طريقة الدفع</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المبلغ</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">الخزينة</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المستخدم</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">إجراءات</th>
                                 </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredPayments.map((p) => {
+                                    const supplier = suppliers.find(s => s.id === p.supplierId);
+                                    const treasury = treasuries.find(t => t.id === p.treasuryId);
+                                    const methodLabel = p.paymentMethod === 'cash' ? 'نقدي' : p.paymentMethod === 'check' ? 'شيك' : 'خصم مكتسب';
+                                    return (
+                                        <tr key={p.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-teal-50 dark:hover:bg-teal-900/10 transition-colors">
+                                            <td className="p-3 font-bold text-teal-600">{p.id}</td>
+                                            <td className="p-3 text-gray-600 dark:text-gray-400">{new Date(p.date).toLocaleDateString('ar-EG')}</td>
+                                            <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{supplier?.name}</td>
+                                            <td className="p-3 text-gray-700 dark:text-gray-300 text-sm">{methodLabel}</td>
+                                            <td className="p-3 font-bold text-red-600"><FormattedNumber value={p.amount} /></td>
+                                            <td className="p-3 text-gray-600 dark:text-gray-400">{treasury?.name || '-'}</td>
+                                            <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.createdBy || '-'}</td>
+                                            <td className="p-3">
+                                                <div className="flex justify-center gap-2">
+                                                    <button onClick={() => handleEdit(p, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
+                                                    <button onClick={() => handleEdit(p, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
+                                                    <button onClick={() => {
+                                                        const supplier = suppliers.find(s => s.id === p.supplierId);
+                                                        const phoneNumber = formatPhoneNumberForWhatsApp(supplier?.phone || '');
+                                                        const text = `سند دفع رقم: ${p.id}%0Aالتاريخ: ${formatDateForDisplay(p.date)}%0Aالمورد: ${supplier?.name || ''}%0Aالمبلغ: ${formatNumber(p.amount)}${defaultValues.whatsappFooter ? '%0A' + encodeURIComponent(defaultValues.whatsappFooter) : ''}`;
+                                                        window.open(phoneNumber ? `https://wa.me/${phoneNumber}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
+                                                    }} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="واتساب"><WhatsAppIcon /></button>
+                                                    {canDelete && <button onClick={() => handleDelete(p)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filteredPayments.length === 0 && (
+                                    <tr><td colSpan={8} className="p-8 text-center text-gray-500">لا توجد سندات تطابق معايير البحث.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    {filteredPayments.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-800 font-bold p-3 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
+                            <span className="text-gray-700 dark:text-gray-300">إجمالي الصفحة:</span>
+                            <span className="text-red-600 text-lg"><FormattedNumber value={filteredTotal} /></span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

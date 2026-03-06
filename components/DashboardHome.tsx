@@ -69,7 +69,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({
     const getTotals = () => {
         const calculateInvoiceTotal = (inv: SalesInvoice | PurchaseInvoice | SalesReturn | PurchaseReturn) => {
             if (!inv || !inv.items) return 0;
-            const itemsTotal = inv.items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
+            const itemsTotal = (inv.items as any[]).reduce((s: number, i: any) => s + (i.price || 0) * (i.quantity || 0), 0);
             return (itemsTotal - (inv.discount || 0)) * (1 + (inv.tax || 0) / 100);
         };
 

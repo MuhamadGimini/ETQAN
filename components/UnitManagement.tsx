@@ -49,6 +49,7 @@ const UnitManagement: React.FC<UnitManagementProps> = ({ units, setUnits, items,
                 lastModifiedAt: new Date().toISOString()
             } : u));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات الوحدة "${formData.name}"` }));
         } else {
             const newUnit: Unit = {
                 id: Date.now(),
@@ -59,6 +60,7 @@ const UnitManagement: React.FC<UnitManagementProps> = ({ units, setUnits, items,
             };
             setUnits([...units, newUnit]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة وحدة جديدة "${newUnit.name}"` }));
         }
         resetForm();
     };

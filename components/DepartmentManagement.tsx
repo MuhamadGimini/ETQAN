@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import type { Department } from '../types';
+import type { Department, MgmtUser } from '../types';
 import { EditIcon, DeleteIcon, PlusCircleIcon, ConfirmationModal } from './Shared';
 
 interface DepartmentManagementProps {
   departments: Department[];
   setDepartments: React.Dispatch<React.SetStateAction<Department[]>>;
+  currentUser: MgmtUser;
 }
 
-const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ departments, setDepartments }) => {
+const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ departments, setDepartments, currentUser }) => {
   const [newDepartmentName, setNewDepartmentName] = useState('');
   const [newDepartmentCode, setNewDepartmentCode] = useState('');
   
@@ -51,6 +52,7 @@ const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ departments
       setDepartments(departments.map(d => 
         d.id === editingId ? { ...d, name: newDepartmentName.trim(), code: finalCode } : d
       ));
+      window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات القسم ${newDepartmentName.trim()}` }));
       setIsEditing(false);
       setEditingId(null);
     } else {
@@ -66,6 +68,7 @@ const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ departments
         name: newDepartmentName.trim(),
       };
       setDepartments([...departments, newDepartment]);
+      window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة قسم جديد ${newDepartment.name}` }));
     }
     
     setNewDepartmentName('');

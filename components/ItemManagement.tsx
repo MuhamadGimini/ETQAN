@@ -22,7 +22,7 @@ interface ItemManagementProps {
     companyData: CompanyData; 
 }
 
-const ItemManagement: React.FC<ItemManagementProps> = ({ 
+const ItemManagement: React.FC<ItemManagementProps> = React.memo(({ 
     items, setItems, units, warehouses, showNotification, currentUser, defaultValues,
     salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, warehouseTransfers, companyData
 }) => {
@@ -180,6 +180,7 @@ const ItemManagement: React.FC<ItemManagementProps> = ({
                 lastModifiedAt: new Date().toISOString()
             } : item));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات الصنف "${formData.name}" (كود: ${formData.id})` }));
         } else {
             let newId = parseInt(generateUniqueId());
             while (items.some(i => i.id === newId)) {
@@ -201,6 +202,7 @@ const ItemManagement: React.FC<ItemManagementProps> = ({
             };
             setItems([...items, newItem]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة صنف جديد "${newItem.name}" (كود: ${newItem.id})` }));
         }
         handleCloseModal();
     };
@@ -676,6 +678,6 @@ const ItemManagement: React.FC<ItemManagementProps> = ({
         </div>
         </>
     );
-};
+});
 
 export default ItemManagement;

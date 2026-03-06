@@ -60,6 +60,7 @@ const WarehouseManagement: React.FC<WarehouseManagementProps> = ({ warehouses, s
             }
             setWarehouses(warehouses.map(wh => wh.id === formData.id ? { ...formData, code: finalCode, id: formData.id } : wh));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات المخزن "${formData.name}"` }));
         } else {
             if (!finalCode) {
                 finalCode = getNextCode();
@@ -78,6 +79,7 @@ const WarehouseManagement: React.FC<WarehouseManagementProps> = ({ warehouses, s
             };
             setWarehouses([...warehouses, newWarehouse]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة مخزن جديد "${newWarehouse.name}"` }));
         }
         resetForm();
     };

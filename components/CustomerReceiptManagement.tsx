@@ -84,6 +84,7 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
     const canEditDate = currentUser.permissions.includes('customerReceipt_editDate');
     
     const dateInputProps = useDateInput(formData.date, (d) => setFormData((prev: any) => ({ ...prev, date: d })));
+    const checkDateInputProps = useDateInput(formData.checkDueDate || '', (d) => setFormData((prev: any) => ({ ...prev, checkDueDate: d })));
 
     useEffect(() => {
         if (docToView && docToView.view === 'customerReceipt') {
@@ -262,6 +263,30 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                                 <option value="discount">خصم مسموح به</option>
                             </select>
                         </div>
+                        {formData.paymentMethod === 'check' && (
+                            <>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>رقم الشيك</label>
+                                    <input type="text" name="checkNumber" value={formData.checkNumber || ''} onChange={handleInputChange} className={inputClass} disabled={isViewing} placeholder="رقم الشيك" />
+                                </div>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>تاريخ الاستحقاق</label>
+                                    <input type="text" {...checkDateInputProps} className={inputClass} disabled={isViewing} placeholder="YYYY-MM-DD" />
+                                </div>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>اسم البنك</label>
+                                    <input type="text" name="bankName" value={formData.bankName || ''} onChange={handleInputChange} className={inputClass} disabled={isViewing} placeholder="اسم البنك" />
+                                </div>
+                                <div className="flex-[14%] min-w-[140px]">
+                                    <label className={labelClass}>حالة الشيك</label>
+                                    <select name="checkStatus" value={formData.checkStatus || 'pending'} onChange={handleInputChange} className={inputClass} disabled={isViewing}>
+                                        <option value="pending">تحت التحصيل</option>
+                                        <option value="collected">تم التحصيل</option>
+                                        <option value="rejected">مرفوض</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
                         <div className="flex-[14%] min-w-[100px]">
                              <label className={labelClass}>المبلغ</label>
                              <input type="number" name="amount" min="0" step="0.01" value={isNaN(formData.amount) ? '' : formData.amount} onChange={handleInputChange} className={inputClass} required disabled={isViewing} />
@@ -324,64 +349,63 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-right">
-                        <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                            <tr>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">رقم السند</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">التاريخ</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">اسم العميل</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">طريقة القبض</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المبلغ</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">الخزينة</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المستخدم</th>
-                                <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredReceipts.map((r) => {
-                                const customer = customers.find(c => c.id === r.customerId);
-                                const treasury = treasuries.find(t => t.id === r.treasuryId);
-                                const methodLabel = r.paymentMethod === 'cash' ? 'نقدي' : r.paymentMethod === 'check' ? 'شيك' : 'خصم مسموح به';
-                                return (
-                                    <tr key={r.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors">
-                                        <td className="p-3 font-bold text-indigo-600">{r.id}</td>
-                                        <td className="p-3 text-gray-600 dark:text-gray-400">{new Date(r.date).toLocaleDateString('ar-EG')}</td>
-                                        <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{customer?.name}</td>
-                                        <td className="p-3 text-gray-700 dark:text-gray-300 text-sm">{methodLabel}</td>
-                                        <td className="p-3 font-bold text-green-600"><FormattedNumber value={r.amount} /></td>
-                                        <td className="p-3 text-gray-600 dark:text-gray-400">{treasury?.name || '-'}</td>
-                                        <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{r.createdBy || '-'}</td>
-                                        <td className="p-3">
-                                            <div className="flex justify-center gap-2">
-                                                <button onClick={() => handleEdit(r, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
-                                                <button onClick={() => handleEdit(r, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
-                                                <button onClick={() => {
-                                                    const customer = customers.find(c => c.id === r.customerId);
-                                                    const phoneNumber = formatPhoneNumberForWhatsApp(customer?.phone || '');
-                                                    const text = `سند قبض رقم: ${r.id}%0Aالتاريخ: ${formatDateForDisplay(r.date)}%0Aالعميل: ${customer?.name || ''}%0Aالمبلغ: ${formatNumber(r.amount)}${defaultValues.whatsappFooter ? '%0A' + encodeURIComponent(defaultValues.whatsappFooter) : ''}`;
-                                                    window.open(phoneNumber ? `https://wa.me/${phoneNumber}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
-                                                }} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="واتساب"><WhatsAppIcon /></button>
-                                                {canDelete && <button onClick={() => handleDelete(r)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {filteredReceipts.length === 0 && (
-                                <tr><td colSpan={8} className="p-8 text-center text-gray-500">لا توجد سندات تطابق معايير البحث.</td></tr>
-                            )}
-                        </tbody>
-                        {filteredReceipts.length > 0 && (
-                            <tfoot className="bg-gray-50 dark:bg-gray-800 font-bold">
+                <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col">
+                    <div className="overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                        <table className="w-full text-right border-collapse">
+                            <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <td colSpan={4} className="p-3 text-left">إجمالي الصفحة:</td>
-                                    <td className="p-3 text-green-600 text-lg"><FormattedNumber value={filteredTotal} /></td>
-                                    <td colSpan={3}></td>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">رقم السند</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">التاريخ</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">اسم العميل</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">طريقة القبض</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المبلغ</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">الخزينة</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">المستخدم</th>
+                                    <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600 text-center">إجراءات</th>
                                 </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredReceipts.map((r) => {
+                                    const customer = customers.find(c => c.id === r.customerId);
+                                    const treasury = treasuries.find(t => t.id === r.treasuryId);
+                                    const methodLabel = r.paymentMethod === 'cash' ? 'نقدي' : r.paymentMethod === 'check' ? 'شيك' : 'خصم مسموح به';
+                                    return (
+                                        <tr key={r.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors">
+                                            <td className="p-3 font-bold text-indigo-600">{r.id}</td>
+                                            <td className="p-3 text-gray-600 dark:text-gray-400">{new Date(r.date).toLocaleDateString('ar-EG')}</td>
+                                            <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{customer?.name}</td>
+                                            <td className="p-3 text-gray-700 dark:text-gray-300 text-sm">{methodLabel}</td>
+                                            <td className="p-3 font-bold text-green-600"><FormattedNumber value={r.amount} /></td>
+                                            <td className="p-3 text-gray-600 dark:text-gray-400">{treasury?.name || '-'}</td>
+                                            <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{r.createdBy || '-'}</td>
+                                            <td className="p-3">
+                                                <div className="flex justify-center gap-2">
+                                                    <button onClick={() => handleEdit(r, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
+                                                    <button onClick={() => handleEdit(r, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
+                                                    <button onClick={() => {
+                                                        const customer = customers.find(c => c.id === r.customerId);
+                                                        const phoneNumber = formatPhoneNumberForWhatsApp(customer?.phone || '');
+                                                        const text = `سند قبض رقم: ${r.id}%0Aالتاريخ: ${formatDateForDisplay(r.date)}%0Aالعميل: ${customer?.name || ''}%0Aالمبلغ: ${formatNumber(r.amount)}${defaultValues.whatsappFooter ? '%0A' + encodeURIComponent(defaultValues.whatsappFooter) : ''}`;
+                                                        window.open(phoneNumber ? `https://wa.me/${phoneNumber}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
+                                                    }} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="واتساب"><WhatsAppIcon /></button>
+                                                    {canDelete && <button onClick={() => handleDelete(r)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filteredReceipts.length === 0 && (
+                                    <tr><td colSpan={8} className="p-8 text-center text-gray-500">لا توجد سندات تطابق معايير البحث.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    {filteredReceipts.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-800 font-bold p-3 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
+                            <span className="text-gray-700 dark:text-gray-300">إجمالي الصفحة:</span>
+                            <span className="text-green-600 text-lg"><FormattedNumber value={filteredTotal} /></span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -57,6 +57,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ customers, setC
                 lastModifiedAt: new Date().toISOString()
             } : c));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات العميل "${formData.name}"` }));
         } else {
             const newCustomer: Customer = {
                 id: Date.now(),
@@ -69,6 +70,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ customers, setC
             };
             setCustomers([...customers, newCustomer]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة عميل جديد "${newCustomer.name}"` }));
         }
         resetForm();
     };

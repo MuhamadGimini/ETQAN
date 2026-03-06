@@ -30,13 +30,15 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
     const [isClearModalOpen, setIsClearModalOpen] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
-    const [selectedStation, setSelectedStation] = useState({ name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://stream.radiojar.com/8s5u5tpdtwzuv' });
+    const [selectedStation, setSelectedStation] = useState({ name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://n0a.radiojar.com/8s5u5tpdtwzuv' });
     const [isRadioPlaying, setIsRadioPlaying] = useState(false);
     
     const stations = [
-        { name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://stream.radiojar.com/8s5u5tpdtwzuv' },
-        { name: 'إذاعة القرآن الكريم - السعودية', url: 'https://stream.radiojar.com/4wqre23fytzuv' }, 
+        { name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://n0a.radiojar.com/8s5u5tpdtwzuv' },
+        { name: 'إذاعة القرآن الكريم - السعودية', url: 'https://n02.radiojar.com/4wqre23fytzuv' }, 
         { name: 'قناة المجد للقرآن الكريم (تراتيل)', url: 'https://backup.qurango.net/radio/tarateel' },
+        { name: 'إذاعة الشيخ ماهر المعيقلي', url: 'https://Qurango.net/radio/maher_al_meaqli.mp3' },
+        { name: 'إذاعة الشيخ مشاري العفاسي', url: 'https://qurango.net/radio/mishary_alafasi.mp3' },
         { name: 'إذاعة الشيخ عبدالباسط عبدالصمد', url: 'https://backup.qurango.net/radio/abdulbasit_abdulsamad_mojawwad' },
         { name: 'إذاعة الشيخ محمد صديق المنشاوي', url: 'https://backup.qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad' },
         { name: 'إذاعة الشيخ محمود خليل الحصري', url: 'https://backup.qurango.net/radio/mahmoud_khalil_alhussary_mojawwad' },
@@ -157,6 +159,7 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
 
         const initialChannels: ChatChannel[] = [
             { id: 'general', name: 'عام' },
+            { id: 'transactions', name: 'النظام' },
             { id: 'support', name: 'الدعم الفني' },
             { id: 'quran', name: 'إذاعة القرآن الكريم' },
             // Only show online users
@@ -440,6 +443,8 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
         const audio = radioAudioRef.current;
         if (audio) {
             if (isRadioPlaying) {
+                // Force reload to handle potential stream interruptions or source changes
+                audio.load();
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
@@ -463,6 +468,7 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
                 ref={radioAudioRef} 
                 src={selectedStation.url} 
                 preload="none"
+                crossOrigin="anonymous"
                 onEnded={() => setIsRadioPlaying(false)}
                 onError={(e) => {
                     const target = e.target as HTMLAudioElement;
@@ -673,8 +679,18 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
                                     if (isSystem) {
                                         return (
                                             <div key={msg.id || index} className="flex justify-center my-2">
-                                                <span className="bg-[#e1f3fb] text-gray-600 text-[10px] px-3 py-1 rounded-lg shadow-sm">
-                                                    {msg.text}
+                                                <span className="bg-[#e1f3fb] text-gray-600 text-[14px] px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2">
+                                                    <span className="font-bold">{msg.text}</span>
+                                                    <span className="text-[11px] opacity-70 border-r border-gray-300 pr-2 mr-2">
+                                                        {new Date(msg.timestamp).toLocaleString('ar-EG', { 
+                                                            year: 'numeric', 
+                                                            month: 'numeric', 
+                                                            day: 'numeric', 
+                                                            hour: 'numeric', 
+                                                            minute: '2-digit', 
+                                                            hour12: true 
+                                                        })}
+                                                    </span>
                                                 </span>
                                             </div>
                                         );

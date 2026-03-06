@@ -10,9 +10,10 @@ interface UpdateManagementProps {
     latestVersion?: string;
     downloadUrl?: string;
     releaseNotes?: string;
+    onNavigate: (view: string) => void;
 }
 
-const UpdateManagement: React.FC<UpdateManagementProps> = ({ licenseStatus, latestVersion, downloadUrl, releaseNotes }) => {
+const UpdateManagement: React.FC<UpdateManagementProps> = ({ licenseStatus, latestVersion, downloadUrl, releaseNotes, onNavigate }) => {
     const [isChecking, setIsChecking] = useState(false);
     
     const hasUpdate = latestVersion && latestVersion !== APP_VERSION;
@@ -79,9 +80,15 @@ const UpdateManagement: React.FC<UpdateManagementProps> = ({ licenseStatus, late
                             </div>
                         </div>
                         <h3 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">خدمة التحديثات غير متاحة</h3>
-                        <p className="text-gray-700 dark:text-gray-300 text-lg">
+                        <p className="text-gray-700 dark:text-gray-300 text-lg mb-4">
                             للحصول على تحديثات البرنامج والميزات الجديدة، يجب تفعيل النسخة أولاً.
                         </p>
+                        <button 
+                            onClick={() => onNavigate('settingsActivation')}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-md"
+                        >
+                            للتفعيل اضغط هنا للتحويل الى تفعيل البرنامج
+                        </button>
                     </div>
                 ) : (
                     <>

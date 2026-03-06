@@ -59,6 +59,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, showNo
             }
             setUsers(users.map(user => user.id === formData.id ? { ...user, username: formData.username, fullName: formData.fullName } : user));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل بيانات المستخدم ${formData.fullName}` }));
         } else {
             const newUser: MgmtUser = {
                 id: Date.now(),
@@ -70,6 +71,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, showNo
             };
             setUsers([...users, newUser]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة مستخدم جديد ${newUser.fullName}` }));
         }
         resetForm();
     };

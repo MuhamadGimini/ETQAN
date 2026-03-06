@@ -94,18 +94,47 @@ const About: React.FC<AboutProps> = ({ updateAvailable, onNavigate, activeDataba
                 </h2>
                 <ul className="space-y-3 list-disc list-inside text-gray-700 dark:text-gray-300 text-lg">
                     <li>
-                        <span className="font-bold text-blue-600 dark:text-blue-400">إصلاح قاعدة البيانات السحابية:</span> تحسينات جوهرية في استقرار المزامنة وحل مشاكل الاتصال بقواعد البيانات السحابية.
+                        <span className="font-bold text-blue-600 dark:text-blue-400">تعدد المخازن في الفواتير:</span> إمكانية اختيار مخزن مختلف لكل صنف داخل فاتورة المشتريات، مرتجع المبيعات، ومرتجع المشتريات.
                     </li>
                     <li>
-                        <span className="font-bold text-blue-600 dark:text-blue-400">إصلاح الجداول:</span> معالجة مشكلة تثبيت رأس الجدول (Sticky Header) عند استخدام شريط البحث لضمان بقاء العناوين ظاهرة.
+                        <span className="font-bold text-blue-600 dark:text-blue-400">اختصارات لوحة المفاتيح:</span> إضافة مجموعة من الاختصارات السريعة (F2-F10) للتنقل الفوري بين أهم شاشات النظام.
                     </li>
                     <li>
-                        <span className="font-bold text-blue-600 dark:text-blue-400">تقارير المبيعات:</span> إضافة عمود "نوع الفاتورة" (نقدي / آجل) في التقارير لتسهيل الفرز والتحليل.
+                        <span className="font-bold text-blue-600 dark:text-blue-400">إعادة ترتيب الجداول:</span> تحسين ترتيب الأعمدة في شاشات المرتجعات والمشتريات لتسهيل عملية الإدخال والمراجعة.
                     </li>
                     <li>
-                        <span className="font-bold text-blue-600 dark:text-blue-400">تجربة المستخدم:</span> إظهار "رصيد الصنف الحالي" مباشرة أسفل حقول اختيار الأصناف في جميع شاشات الفواتير والتحويلات.
+                        <span className="font-bold text-blue-600 dark:text-blue-400">التحديث التلقائي:</span> ربط النظام بمستودع GitHub الرسمي (ETQAN) لضمان وصول التحديثات بشكل تلقائي وسلس.
                     </li>
                 </ul>
+            </div>
+
+            {/* Keyboard Shortcuts Card */}
+            <div className={`${cardClass} border-l-4 border-l-indigo-500`}>
+                <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-4 flex items-center gap-2">
+                    <span>⌨️</span> اختصارات لوحة المفاتيح
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">استخدم هذه الاختصارات للتنقل السريع داخل النظام دون الحاجة لاستخدام الماوس:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                        { key: 'F2', name: 'فاتورة مبيعات', desc: 'فتح شاشة مبيعات جديدة' },
+                        { key: 'F3', name: 'فاتورة مشتريات', desc: 'فتح شاشة مشتريات جديدة' },
+                        { key: 'F4', name: 'مرتجع مبيعات', desc: 'فتح شاشة مرتجع مبيعات' },
+                        { key: 'F5', name: 'مرتجع مشتريات', desc: 'فتح شاشة مرتجع مشتريات' },
+                        { key: 'F6', name: 'سند قبض عميل', desc: 'تسجيل دفعة من عميل' },
+                        { key: 'F7', name: 'سند صرف مورد', desc: 'تسجيل دفعة لمورد' },
+                        { key: 'F8', name: 'إدارة المصروفات', desc: 'تسجيل المصاريف اليومية' },
+                        { key: 'F9', name: 'بحث عن صنف', desc: 'البحث السريع عن الأصناف' },
+                        { key: 'F10', name: 'الرئيسية', desc: 'العودة للوحة التحكم' },
+                    ].map(s => (
+                        <div key={s.key} className="flex items-center gap-3 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
+                            <span className="bg-indigo-600 text-white px-3 py-1 rounded font-mono font-bold shadow-sm">{s.key}</span>
+                            <div>
+                                <div className="font-bold text-gray-800 dark:text-gray-200 text-sm">{s.name}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{s.desc}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Online Update Instructions Card */}

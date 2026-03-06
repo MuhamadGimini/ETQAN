@@ -26,6 +26,7 @@ export const menuItems = [
       { id: 'customerReceipt', label: 'سند قبض عميل', granular: ['edit', 'delete', 'editDate'] },
       { id: 'supplierPayment', label: 'سند دفع مورد', granular: ['edit', 'delete', 'editDate'] },
       { id: 'treasuryTransfer', label: 'تحويلات الخزينة', granular: ['delete', 'editDate'] },
+      { id: 'chequeCalendar', label: 'أجندة الشيكات' },
       { id: 'expenseCategoryManagement', label: 'تكويد المصروفات', granular: ['edit', 'delete'] },
       { id: 'treasuryManagement', label: 'تكويد الخزينة', granular: ['edit', 'delete'] },
   ]},
@@ -55,6 +56,9 @@ export const menuItems = [
       { id: 'itemsInWarehouses', label: 'الأصناف في المخازن', group: 'تقارير المخازن والأصناف' },
       // Treasury Reports Group
       { id: 'dailyLedger', label: 'تقرير النقدية اليومي', group: 'تقارير الخزينة والمصاريف' },
+      { id: 'voucherRegister', label: 'سجل السندات العام', group: 'تقارير الخزينة والمصاريف' },
+      { id: 'customerReceiptRegister', label: 'سجل سندات القبض', group: 'تقارير الخزينة والمصاريف' },
+      { id: 'supplierPaymentRegister', label: 'سجل سندات الدفع', group: 'تقارير الخزينة والمصاريف' },
       { id: 'expenseReport', label: 'تقرير المصروفات', group: 'تقارير الخزينة والمصاريف' },
       // Profit Reports Group
       { id: 'incomeStatement', label: 'قائمة دخل', group: 'تقارير قوائم الأرباح' },

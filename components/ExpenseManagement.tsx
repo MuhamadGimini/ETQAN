@@ -129,10 +129,12 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             if (!canEdit) { alert("ليس لديك صلاحية التعديل."); return; }
             setExpenses(expenses.map(exp => exp.id === formData.id ? { ...(exp as any), ...formData, lastModifiedBy: currentUser.username, lastModifiedAt: new Date().toISOString() } : exp));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل مصروف رقم ${formData.id} بقيمة ${formData.amount}` }));
         } else {
             const newExpense: Expense = { ...formData, id: getNextExpenseId(), createdBy: currentUser.username, createdAt: new Date().toISOString() };
             setExpenses([...expenses, newExpense]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإضافة مصروف جديد رقم ${newExpense.id} بقيمة ${formData.amount}` }));
         }
         resetForm();
     };

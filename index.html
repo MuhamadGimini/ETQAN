@@ -35,6 +35,54 @@
       .animate-red-pulse {
         animation: red-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
+      .markdown-body {
+        font-size: 16px;
+        line-height: 1.6;
+        color: inherit;
+      }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        font-weight: bold;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        color: #008069;
+      }
+      .markdown-body h1 { font-size: 1.25rem; }
+      .markdown-body h2 { font-size: 1.15rem; }
+      .markdown-body h3 { font-size: 1.05rem; }
+      .markdown-body p { margin-bottom: 0.75rem; }
+      .markdown-body ul, .markdown-body ol {
+        margin-bottom: 0.75rem;
+        padding-right: 1.5rem;
+        list-style-position: inside;
+      }
+      .markdown-body ul { list-style-type: disc; }
+      .markdown-body ol { list-style-type: decimal; }
+      .markdown-body table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+        font-size: 14px;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .markdown-body th, .markdown-body td {
+        border: 1px solid #e5e7eb;
+        padding: 8px;
+        text-align: right;
+      }
+      .markdown-body th {
+        background-color: #f9fafb;
+        font-weight: bold;
+      }
+      .markdown-body blockquote {
+        border-right: 4px solid #008069;
+        padding-right: 1rem;
+        margin-right: 0;
+        color: #4b5563;
+        font-style: italic;
+      }
       @media print {
         body, html, #root {
           height: auto !important;

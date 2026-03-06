@@ -129,9 +129,12 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
         if (isEditing && newTransfer.id) {
             setTreasuryTransfers(prev => prev.map(t => t.id === newTransfer.id ? { ...t, ...newTransfer, id: newTransfer.id! } : t));
             showNotification('edit');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بتعديل تحويل خزينة رقم ${newTransfer.id} بمبلغ ${newTransfer.amount}` }));
         } else {
-            setTreasuryTransfers(prev => [...prev, { ...newTransfer, amount: newTransfer.amount, id: getNextTransferId(), createdBy: currentUser.username, createdAt: new Date().toISOString() }]);
+            const createdTransfer = { ...newTransfer, amount: newTransfer.amount, id: getNextTransferId(), createdBy: currentUser.username, createdAt: new Date().toISOString() };
+            setTreasuryTransfers(prev => [...prev, createdTransfer]);
             showNotification('add');
+            window.dispatchEvent(new CustomEvent('logTransaction', { detail: `قام المستخدم ${currentUser.fullName} بإنشاء تحويل خزينة رقم ${createdTransfer.id} بمبلغ ${createdTransfer.amount}` }));
         }
         
         resetForm();
