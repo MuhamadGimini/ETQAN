@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import type { Item, Warehouse, SalesInvoice, SalesReturn, PurchaseInvoice, PurchaseReturn, WarehouseTransfer, CompanyData, DefaultValues, Customer, Supplier } from '../types';
 import { ViewIcon, PrintIcon, FormattedNumber, ChevronDownIcon } from './Shared';
 import { searchMatch, formatDateForDisplay } from '../utils';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface ItemMovementProps {
     items: Item[];
@@ -217,59 +218,32 @@ const ItemMovement: React.FC<ItemMovementProps> = ({
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const tableRows = reportData.rows.map(row => `
-            <tr class="${row.isOpening || row.isClosing ? 'bg-gray-100 font-bold' : ''}">
-                <td class="border p-2 text-center">${row.date ? formatDateForDisplay(row.date) : '-'}</td>
-                <td class="border p-2 text-center">${row.docId}</td>
-                <td class="border p-2 text-center">${row.permissionNumber || '-'}</td>
-                <td class="border p-2 text-right">${row.type}</td>
-                <td class="border p-2 text-center text-green-700">${row.incoming || ''}</td>
-                <td class="border p-2 text-center text-red-600">${row.outgoing || ''}</td>
-                <td class="border p-2 text-center font-bold">${row.balanceAfter}</td>
+        const headers = ['التاريخ', 'رقم المستند', 'رقم الاذن', 'البيان', 'وارد (+)', 'منصرف (-)', 'الرصيد'];
+
+        const rowsHtml = reportData.rows.map(row => `
+            <tr class="${row.isOpening || row.isClosing ? 'bg-gray-100 font-black' : ''}">
+                <td class="whitespace-nowrap">${row.date ? formatDateForDisplay(row.date) : '-'}</td>
+                <td>${row.docId}</td>
+                <td>${row.permissionNumber || '-'}</td>
+                <td class="text-right font-black">${row.type}</td>
+                <td class="text-green font-black">${row.incoming || ''}</td>
+                <td class="text-red font-black">${row.outgoing || ''}</td>
+                <td class="font-black text-indigo">${row.balanceAfter}</td>
             </tr>
         `).join('');
 
-        printWindow.document.write(`
-            <html dir="rtl">
-            <head>
-                <title>حركة صنف - ${reportData.itemName}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; padding: 20px; }
-                    @media print { .no-print { display: none; } }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid black; padding: 8px; }
-                </style>
-            </head>
-            <body onload="window.print(); window.close();">
-                <div class="text-center mb-6 border-b pb-4">
-                    <h1 class="text-2xl font-bold">${companyData.name}</h1>
-                    <h2 class="text-xl">كشف حركة صنف تفصيلي</h2>
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>الصنف:</span><span class="font-black">${reportData.itemName}</span></div>
+                <div class="summary-item"><span>المخزن:</span><span class="font-black">${reportData.warehouseName}</span></div>
+                <div class="summary-item font-black text-lg border-t-2 border-indigo mt-2 pt-2">
+                    <span>الرصيد النهائي:</span><span class="text-indigo">${reportData.currentBalance}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <p><strong>الصنف:</strong> ${reportData.itemName}</p>
-                    <p><strong>المخزن:</strong> ${reportData.warehouseName}</p>
-                    <p><strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-EG')}</p>
-                    <p class="text-lg"><strong>الرصيد النهائي:</strong> ${reportData.currentBalance}</p>
-                </div>
-                <table>
-                    <thead>
-                        <tr class="bg-gray-200">
-                            <th>التاريخ</th>
-                            <th>رقم المستند</th>
-                            <th>رقم الاذن</th>
-                            <th>البيان</th>
-                            <th>وارد (+)</th>
-                            <th>منصرف (-)</th>
-                            <th>الرصيد</th>
-                        </tr>
-                    </thead>
-                    <tbody>${tableRows}</tbody>
-                </table>
-            </body>
-            </html>
-        `);
+            </div>
+        `;
+
+        const subtitle = `كشف حركة صنف تفصيلي: ${reportData.itemName} | مخزن: ${reportData.warehouseName}`;
+        printWindow.document.write(getReportPrintTemplate('تقرير حركة صنف', subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

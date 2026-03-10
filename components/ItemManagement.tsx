@@ -36,6 +36,8 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
     const [filterWarehouse, setFilterWarehouse] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [isQuickEditMode, setIsQuickEditMode] = useState(false);
+    const [sortBy, setSortBy] = useState<string>('name');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
     const importFileRef = useRef<HTMLInputElement>(null);
@@ -254,8 +256,34 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                 if (!searchQuery.trim()) return true;
                 if (item.barcode === searchQuery.trim()) return true;
                 return searchMatch(item.name, searchQuery) || searchMatch(item.barcode, searchQuery);
+            })
+            .sort((a, b) => {
+                let comparison = 0;
+                switch (sortBy) {
+                    case 'name':
+                        comparison = a.name.localeCompare(b.name, 'ar');
+                        break;
+                    case 'barcode':
+                        comparison = a.barcode.localeCompare(b.barcode);
+                        break;
+                    case 'purchasePrice':
+                        comparison = a.purchasePrice - b.purchasePrice;
+                        break;
+                    case 'sellPrice':
+                        comparison = a.sellPrice - b.sellPrice;
+                        break;
+                    case 'initialBalance':
+                        comparison = a.initialBalance - b.initialBalance;
+                        break;
+                    case 'openingBalance':
+                        comparison = a.openingBalance - b.openingBalance;
+                        break;
+                    default:
+                        comparison = 0;
+                }
+                return sortOrder === 'asc' ? comparison : -comparison;
             });
-    }, [items, searchQuery, filterWarehouse]);
+    }, [items, searchQuery, filterWarehouse, sortBy, sortOrder]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -618,6 +646,28 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">ترتيب حسب:</label>
+                            <select 
+                                value={sortBy} 
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="h-11 px-3 bg-black/5 dark:bg-white/5 rounded-lg shadow-[inset_3px_3px_7px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 dark:text-white font-bold transition duration-300 text-sm"
+                            >
+                                <option value="name">الاسم</option>
+                                <option value="barcode">الباركود</option>
+                                <option value="purchasePrice">سعر الشراء</option>
+                                <option value="sellPrice">سعر البيع</option>
+                                <option value="initialBalance">رصيد أول</option>
+                                <option value="openingBalance">رصيد آخر</option>
+                            </select>
+                            <button 
+                                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                                className="h-11 px-3 bg-black/5 dark:bg-white/5 rounded-lg shadow-[inset_3px_3px_7px_rgba(0,0,0,0.2)] hover:bg-black/10 dark:hover:bg-white/10 transition-all text-gray-800 dark:text-white font-bold text-sm"
+                                title={sortOrder === 'asc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'}
+                            >
+                                {sortOrder === 'asc' ? '↑' : '↓'}
+                            </button>
+                        </div>
                         <input type="text" placeholder="ابحث بالاسم أو الباركود..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`${inputClass} w-64`} />
                          <div className="relative w-48">
                             <input type="text" value={warehouseFilterSearchQuery} onChange={handleWarehouseFilterSearchChange} onFocus={() => setIsWarehouseFilterSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsWarehouseFilterSuggestionsOpen(false), 200)} placeholder="فلتر المخزن..." className={inputClass} autoComplete="off" />

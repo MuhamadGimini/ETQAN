@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import type { SalesInvoice, SalesReturn, Expense, Item, CompanyData, DefaultValues, ExpenseCategory } from '../types';
 import { PrintIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
+import { formatDateForDisplay } from '../utils';
 
 interface IncomeStatementProps {
     salesInvoices: SalesInvoice[];
@@ -150,88 +152,42 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({
             return;
         }
 
-        let partnersHtml = '';
-        if (partners.length > 0) {
-            const partnersRows = partners.map(p => {
-                const amount = reportData.netProfit * (p.percentage / 100);
-                return `
-                    <tr class="border-b border-gray-300">
-                        <td class="p-2 border border-gray-300 font-bold">${p.name}</td>
-                        <td class="p-2 border border-gray-300 text-center">${p.percentage}%</td>
-                        <td class="p-2 border border-gray-300 font-bold text-left">${amount.toFixed(2)}</td>
-                    </tr>
-                `;
-            }).join('');
+        const headers = ['البيان', 'المبلغ (ج.م)'];
+        const rowsHtml = `
+            <tr><td class="text-right font-black">صافي المبيعات</td><td class="font-black text-indigo">${reportData.netSales.toFixed(2)}</td></tr>
+            <tr><td class="text-right pl-8">إجمالي المبيعات</td><td>${reportData.totalSales.toFixed(2)}</td></tr>
+            <tr><td class="text-right pl-8">(-) مرتجع المبيعات</td><td class="text-red">(${reportData.totalReturns.toFixed(2)})</td></tr>
+            <tr><td class="text-right font-black">(-) صافي تكلفة المبيعات</td><td class="font-black text-red">(${reportData.netCogs.toFixed(2)})</td></tr>
+            <tr><td class="text-right pl-8">تكلفة المبيعات</td><td>${reportData.cogsForSales.toFixed(2)}</td></tr>
+            <tr><td class="text-right pl-8">(-) تكلفة المرتجعات</td><td class="text-red">(${reportData.cogsForReturns.toFixed(2)})</td></tr>
+            <tr class="bg-indigo-50"><td class="text-right font-black text-lg">(=) مجمل الربح</td><td class="font-black text-lg text-indigo">${reportData.grossProfit.toFixed(2)}</td></tr>
+            <tr><td class="text-right font-black">(-) اجمالي المصروفات</td><td class="font-black text-red">(${reportData.totalExpenses.toFixed(2)})</td></tr>
+            ${Object.entries(reportData.groupedExpenses).map(([name, amount]) => `
+                <tr><td class="text-right pl-8">${name}</td><td class="text-red">(${(amount as number).toFixed(2)})</td></tr>
+            `).join('')}
+            <tr class="${reportData.netProfit >= 0 ? 'bg-green-100' : 'bg-red-100'}">
+                <td class="text-right font-black text-xl">(=) صافي الربح</td>
+                <td class="font-black text-xl ${reportData.netProfit >= 0 ? 'text-green' : 'text-red'}">${reportData.netProfit.toFixed(2)}</td>
+            </tr>
+        `;
 
-            partnersHtml = `
-                <div class="mt-8 pt-4 border-t-2 border-black">
-                    <h3 class="text-xl font-bold text-center mb-4">توزيع الأرباح على الشركاء</h3>
-                    <table class="w-full text-right border-collapse border border-gray-400">
-                        <thead class="bg-gray-200">
-                            <tr>
-                                <th class="p-2 border border-gray-300">اسم الشريك</th>
-                                <th class="p-2 border border-gray-300 text-center">النسبة</th>
-                                <th class="p-2 border border-gray-300 text-left">نصيب الربح</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${partnersRows}
-                        </tbody>
-                    </table>
+        let summaryHtml = '';
+        if (partners.length > 0) {
+            summaryHtml = `
+                <div class="w-full mt-4">
+                    <h3 class="text-lg font-bold text-center mb-2">توزيع الأرباح</h3>
+                    ${partners.map(p => {
+                        const amount = reportData.netProfit * (p.percentage / 100);
+                        return `<div class="summary-item"><span>${p.name} (${p.percentage}%):</span><span>${amount.toFixed(2)}</span></div>`;
+                    }).join('')}
                 </div>
             `;
         }
 
-        const reportHtml = `
-            <html>
-            <head>
-                <title>قائمة الدخل</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; direction: rtl; }
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                </style>
-            </head>
-            <body class="p-8" onload="window.print(); window.close();">
-                <div class="text-center mb-6 border-b-2 border-black pb-4">
-                    <h1 class="text-3xl font-bold">${companyData.name}</h1>
-                    <p>${companyData.address}</p>
-                </div>
-                <h2 class="text-2xl font-bold text-center mb-2">قائمة الدخل</h2>
-                <p class="text-center text-gray-600 mb-6">للفترة من ${startDate || 'البداية'} إلى ${endDate || 'النهاية'}</p>
-                <div class="space-y-2 max-w-3xl mx-auto text-lg">
-                    
-                    <div class="flex justify-between p-2"><span class="font-bold">صافي المبيعات</span><span class="font-bold text-xl text-blue-600">${reportData.netSales.toFixed(2)}</span></div>
-                    <div class="flex justify-between p-1 pl-6"><span>إجمالي المبيعات</span><span class="font-mono">${reportData.totalSales.toFixed(2)}</span></div>
-                    <div class="flex justify-between p-1 pl-6"><span>(-) مرتجع المبيعات</span><span class="font-mono text-red-600">(${reportData.totalReturns.toFixed(2)})</span></div>
+        const subtitle = `للفترة من ${formatDateForDisplay(startDate) || 'البداية'} إلى ${formatDateForDisplay(endDate) || 'النهاية'}`;
+        const title = `قائمة الدخل (الأرباح والخسائر)`;
 
-                    <div class="flex justify-between p-2 mt-4"><span class="font-bold">(-) صافي تكلفة المبيعات</span><span class="font-bold text-xl text-red-600">(${reportData.netCogs.toFixed(2)})</span></div>
-                    <div class="flex justify-between p-1 pl-6"><span>تكلفة المبيعات</span><span class="font-mono">${reportData.cogsForSales.toFixed(2)}</span></div>
-                    <div class="flex justify-between p-1 pl-6"><span>(-) تكلفة المرتجعات</span><span class="font-mono text-red-600">(${reportData.cogsForReturns.toFixed(2)})</span></div>
-                    
-                    <hr class="my-2 border-t-2 border-gray-400"/>
-                    <div class="flex justify-between items-center p-2 bg-gray-100"><span class="font-bold text-xl">(=) مجمل الربح</span><span class="font-bold text-xl text-blue-600">${reportData.grossProfit.toFixed(2)}</span></div>
-                    
-                    <div class="flex justify-between p-2 mt-4"><span class="font-bold">(-) اجمالي المصروفات</span><span class="font-bold text-xl text-red-600">(${reportData.totalExpenses.toFixed(2)})</span></div>
-                    ${Object.entries(reportData.groupedExpenses).map(([name, amount]) => `
-                        <div class="flex justify-between p-1 pl-6"><span>${name}</span><span class="font-mono text-red-600">(${(amount as number).toFixed(2)})</span></div>
-                    `).join('')}
-
-                    <hr class="my-2 border-t-2 border-gray-400"/>
-                    <div class="flex justify-between items-center p-4 rounded ${reportData.netProfit >= 0 ? 'bg-green-100' : 'bg-red-100'}"><span class="font-bold text-2xl">(=) صافي الربح</span><span class="font-bold text-2xl ${reportData.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}">${reportData.netProfit.toFixed(2)}</span></div>
-                </div>
-                
-                ${partnersHtml}
-
-                 <div class="text-center mt-8 text-sm">
-                    <p>${defaultValues.invoiceFooter}</p>
-                </div>
-            </body>
-            </html>
-        `;
-
-        printWindow.document.write(reportHtml);
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

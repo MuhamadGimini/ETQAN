@@ -4,6 +4,7 @@ import type { Customer, SalesInvoice, SalesReturn, CustomerReceipt, CompanyData,
 import { ViewIcon, PrintIcon, PdfIcon, FormattedNumber, DownloadIcon } from './Shared';
 import { searchMatch } from '../utils';
 import { exportToExcel } from '../services/excel';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface AllCustomersStatementProps {
     customers: Customer[];
@@ -138,10 +139,8 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
             return;
         }
 
-        // Use the already filtered list so print matches view
         const printableSummaries = filteredSummaries;
 
-        // Recalculate totals based on the filtered list for consistency in the printed report.
         const totalReceivables = printableSummaries
             .filter(c => c.closingBalance > 0)
             .reduce((acc, curr) => acc + curr.closingBalance, 0);
@@ -152,70 +151,38 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
 
         const netBalance = totalReceivables + totalPayables;
 
-        const reportHtml = `
-            <html>
-            <head>
-                <title>تقرير أرصدة العملاء</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; direction: rtl; }
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    .no-print { display: none !important; }
-                </style>
-            </head>
-            <body class="p-8" onload="window.print(); window.close();">
-                <div class="text-center mb-6 border-b-2 border-black pb-4">
-                    <h1 class="text-3xl font-bold">${companyData.name}</h1>
-                    <p>${companyData.address}</p>
-                    <p>تليفون: ${companyData.phone1} ${companyData.phone2 ? `- ${companyData.phone2}` : ''}</p>
-                </div>
-                <h2 class="text-2xl font-bold text-center mb-4">تقرير أرصدة العملاء النهائية</h2>
-                
-                <div class="grid grid-cols-3 gap-4 mb-6 text-sm border p-4 rounded-lg bg-gray-50">
-                    <div>عدد العملاء: <span class="font-bold">${printableSummaries.length}</span></div>
-                    <div>إجمالي المبيعات: <span class="font-bold">${totals.totalSales.toFixed(2)}</span></div>
-                    <div>إجمالي المدفوعات: <span class="font-bold">${totals.totalPayments.toFixed(2)}</span></div>
-                </div>
+        const headers = ['م', 'اسم العميل', 'رصيد أول', 'مبيعات', 'مرتجع', 'مدفوعات', 'الرصيد النهائي'];
 
-                <table class="w-full text-right border-collapse border border-gray-400">
-                    <thead class="bg-gray-200">
-                        <tr>
-                             <th class="p-2 border border-gray-300 w-16 text-center">م</th>
-                             <th class="p-2 border border-gray-300">اسم العميل</th>
-                             <th class="p-2 border border-gray-300 w-48">الرصيد النهائي</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${printableSummaries.map((summary, index) => `
-                            <tr class="border-b">
-                                <td class="p-2 border border-gray-300 text-center">${index + 1}</td>
-                                <td class="p-2 border border-gray-300 font-bold">${summary.name}</td>
-                                <td class="p-2 border border-gray-300 font-bold ${summary.closingBalance >= 0 ? 'text-green-700' : 'text-red-700'}">${summary.closingBalance.toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                        <tr class="bg-gray-100 font-bold">
-                            <td class="p-2 border border-gray-300 text-center" colspan="2">إجمالي المديونية (لنا)</td>
-                            <td class="p-2 border border-gray-300 text-green-800">${totalReceivables.toFixed(2)}</td>
-                        </tr>
-                        <tr class="bg-gray-100 font-bold">
-                            <td class="p-2 border border-gray-300 text-center" colspan="2">إجمالي الدائن (علينا)</td>
-                            <td class="p-2 border border-gray-300 text-red-800">${totalPayables.toFixed(2)}</td>
-                        </tr>
-                         <tr class="bg-blue-100 font-bold border-t-2 border-blue-500">
-                            <td class="p-2 border border-gray-300 text-center" colspan="2">صافي الأرصدة</td>
-                            <td class="p-2 border border-gray-300 text-blue-800">${netBalance.toFixed(2)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div class="text-center mt-8 text-sm">
-                    <p>${defaultValues.invoiceFooter}</p>
+        const rowsHtml = printableSummaries.map((summary, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="text-right font-black">${summary.name}</td>
+                <td>${summary.openingBalance.toFixed(2)}</td>
+                <td class="text-green">${summary.totalSales.toFixed(2)}</td>
+                <td class="text-red">${summary.totalReturns.toFixed(2)}</td>
+                <td class="text-indigo">${summary.totalPayments.toFixed(2)}</td>
+                <td class="font-black ${summary.closingBalance >= 0 ? 'text-green' : 'text-red'}">${summary.closingBalance.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>عدد العملاء:</span><span>${printableSummaries.length}</span></div>
+                <div class="summary-item"><span>إجمالي المبيعات:</span><span class="text-green">${totals.totalSales.toFixed(2)}</span></div>
+                <div class="summary-item"><span>إجمالي المدفوعات:</span><span class="text-indigo">${totals.totalPayments.toFixed(2)}</span></div>
+                <div class="summary-item font-black border-t border-gray-300 mt-2 pt-2">
+                    <span>إجمالي المديونية (لنا):</span><span class="text-green">${totalReceivables.toFixed(2)}</span>
                 </div>
-            </body>
-            </html>
+                <div class="summary-item font-black">
+                    <span>إجمالي الدائن (علينا):</span><span class="text-red">${totalPayables.toFixed(2)}</span>
+                </div>
+                <div class="summary-item font-black text-lg border-t-2 border-indigo mt-2 pt-2">
+                    <span>صافي الأرصدة:</span><span class="text-indigo">${netBalance.toFixed(2)}</span>
+                </div>
+            </div>
         `;
-        
-        printWindow.document.write(reportHtml);
+
+        printWindow.document.write(getReportPrintTemplate('تقرير أرصدة العملاء النهائية', '', companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

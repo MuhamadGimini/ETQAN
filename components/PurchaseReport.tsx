@@ -4,6 +4,7 @@ import type { PurchaseInvoice, PurchaseReturn, Item, Supplier, Warehouse, Compan
 import { ViewIcon, PrintIcon, FormattedNumber } from './Shared';
 import { searchMatch, formatDateForDisplay } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface PurchaseReportProps {
     purchaseInvoices: PurchaseInvoice[];
@@ -283,37 +284,44 @@ const PurchaseReport: React.FC<PurchaseReportProps> = ({
             ? ['التاريخ', 'رقم الفاتورة', 'رقم الإذن', 'النوع', 'المورد', 'الإجمالي']
             : ['التاريخ', 'رقم الفاتورة', 'رقم الإذن', 'النوع', 'المورد', 'الصنف', 'الكمية', 'السعر', 'الإجمالي'];
 
-        const tableRows = reportData.rows.map(row => {
+        const rowsHtml = reportData.rows.map(row => {
             if(isSummary) {
                 const r = row as SummaryReportRow;
-                return `<tr class="border-b">
-                    <td class="p-2 border border-gray-300">${formatDateForDisplay(r.date)}</td>
-                    <td class="p-2 border border-gray-300">${r.docId}</td>
-                    <td class="p-2 border border-gray-300">${r.permissionNumber}</td>
-                    <td class="p-2 border border-gray-300">${r.type}</td>
-                    <td class="p-2 border border-gray-300">${r.supplierName}</td>
-                    <td class="p-2 border border-gray-300">${r.total.toFixed(2)}</td>
+                return `<tr>
+                    <td>${formatDateForDisplay(r.date)}</td>
+                    <td>${r.docId}</td>
+                    <td>${r.permissionNumber}</td>
+                    <td class="${r.type === 'مرتجع' ? 'text-red' : 'text-green'}">${r.type}</td>
+                    <td class="text-right">${r.supplierName}</td>
+                    <td class="font-black text-indigo">${r.total.toFixed(2)}</td>
                 </tr>`;
             } else {
                 const r = row as DetailedReportRow;
-                return `<tr class="border-b">
-                    <td class="p-2 border border-gray-300">${formatDateForDisplay(r.date)}</td>
-                    <td class="p-2 border border-gray-300">${r.docId}</td>
-                    <td class="p-2 border border-gray-300">${r.permissionNumber}</td>
-                    <td class="p-2 border border-gray-300">${r.type}</td>
-                    <td class="p-2 border border-gray-300">${r.supplierName}</td>
-                    <td class="p-2 border border-gray-300">${r.itemName}</td>
-                    <td class="p-2 border border-gray-300">${r.quantity}</td>
-                    <td class="p-2 border border-gray-300">${r.price.toFixed(2)}</td>
-                    <td class="p-2 border border-gray-300">${r.total.toFixed(2)}</td>
+                return `<tr>
+                    <td>${formatDateForDisplay(r.date)}</td>
+                    <td>${r.docId}</td>
+                    <td>${r.permissionNumber}</td>
+                    <td class="${r.type === 'مرتجع' ? 'text-red' : 'text-green'}">${r.type}</td>
+                    <td class="text-right">${r.supplierName}</td>
+                    <td class="text-right">${r.itemName}</td>
+                    <td>${Math.floor(r.quantity)}</td>
+                    <td>${r.price.toFixed(2)}</td>
+                    <td class="font-black text-indigo">${r.total.toFixed(2)}</td>
                 </tr>`;
             }
         }).join('');
 
-        const tableContent = `<table class="w-full text-right border-collapse"><thead><tr class="bg-gray-200">${headers.map(h => `<th class="p-2 border border-gray-300">${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>`;
-        const summaryContent = `<div class="grid grid-cols-4 gap-4 mt-4 text-center"><div class="p-2 bg-gray-100 rounded"><p class="text-sm">إجمالي المشتريات</p><p class="font-bold">${reportData.totalPurchases.toFixed(2)}</p></div><div class="p-2 bg-gray-100 rounded"><p class="text-sm">إجمالي المرتجعات</p><p class="font-bold">${reportData.totalReturns.toFixed(2)}</p></div><div class="p-2 bg-gray-100 rounded"><p class="text-sm">صافي المشتريات</p><p class="font-bold">${reportData.netPurchases.toFixed(2)}</p></div><div class="p-2 bg-gray-100 rounded"><p class="text-sm">صافي القطع</p><p class="font-bold">${reportData.netPurchasesQty}</p></div></div>`;
+        const summaryHtml = `
+            <div class="summary-item"><span>إجمالي المشتريات:</span><span>${reportData.totalPurchases.toFixed(2)}</span></div>
+            <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-red">-${reportData.totalReturns.toFixed(2)}</span></div>
+            <div class="summary-item"><span>صافي المشتريات:</span><span class="text-green">${reportData.netPurchases.toFixed(2)}</span></div>
+            <div class="summary-item"><span>صافي عدد القطع:</span><span>${reportData.netPurchasesQty}</span></div>
+        `;
 
-        printWindow.document.write(`<html><head><title>تقرير المشتريات</title><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet"><style>body { font-family: 'Cairo', sans-serif; direction: rtl; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: black !important; } @page { size: A4 landscape; margin: 0.5in; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ccc; padding: 4px; font-size: 0.8rem; } thead { background-color: #f2f2f2; }</style></head><body class="p-4" onload="window.print(); window.close();"><div class="text-center mb-4"><h1 class="text-2xl font-bold">${companyData.name}</h1><h2 class="text-xl font-semibold">تقرير المشتريات (${isSummary ? 'إجمالي' : 'تفصيلي'})</h2><p class="text-sm">من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}</p></div>${summaryContent}<div class="mt-4">${tableContent}</div></body></html>`);
+        const subtitle = `الفترة من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}`;
+        const title = `تقرير مشتريات ${isSummary ? 'إجمالي' : 'تفصيلي'}`;
+
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

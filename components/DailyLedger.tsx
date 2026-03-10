@@ -1,8 +1,10 @@
 
 import React, { useState } from 'react';
-import type { SalesInvoice, SalesReturn, Expense, PurchaseInvoice, PurchaseReturn, CustomerReceipt, SupplierPayment, TreasuryTransfer, ExpenseCategory, Treasury, DefaultValues } from '../types';
+import type { SalesInvoice, SalesReturn, Expense, PurchaseInvoice, PurchaseReturn, CustomerReceipt, SupplierPayment, TreasuryTransfer, ExpenseCategory, Treasury, DefaultValues, CompanyData } from '../types';
 import { PrintIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
+import { formatDateForDisplay } from '../utils';
 
 interface DailyLedgerProps {
     salesInvoices: SalesInvoice[];
@@ -16,6 +18,7 @@ interface DailyLedgerProps {
     expenseCategories: ExpenseCategory[];
     treasuries: Treasury[];
     defaultValues: DefaultValues;
+    companyData: CompanyData;
 }
 
 interface ReportData {
@@ -40,7 +43,8 @@ const DailyLedger: React.FC<DailyLedgerProps> = ({
     treasuryTransfers,
     expenseCategories,
     treasuries,
-    defaultValues
+    defaultValues,
+    companyData
 }) => {
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [selectedTreasuryId, setSelectedTreasuryId] = useState<number>(defaultValues.defaultTreasuryId);
@@ -102,93 +106,43 @@ const DailyLedger: React.FC<DailyLedgerProps> = ({
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const styles = `
-            body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 20px; }
-            * { 
-                font-size: 10pt !important; 
-                font-weight: bold !important; 
-                color: black !important; 
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important; 
-            }
-            h1, h2, h3, th, .header h1, .section-title { 
-                font-size: 12pt !important; 
-                font-weight: bold !important; 
-            }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-            .section-title { margin-top: 15px; margin-bottom: 5px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-            .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #eee; }
-            .total-row { display: flex; justify-content: space-between; padding: 8px 0; background-color: #f9f9f9; border-top: 2px solid #eee; margin-top: 5px; }
-            .net-row { display: flex; justify-content: space-between; padding: 15px; font-size: 14pt !important; background-color: #eee; margin-top: 30px; border-radius: 8px; }
+        const headers = ['البيان', 'المبلغ (ج.م)'];
+        
+        const cashInRows = reportData.cashIn.map(item => `
+            <tr><td class="text-right">${item.label}</td><td class="text-green font-black">${item.amount.toFixed(2)}</td></tr>
+        `).join('');
+
+        const expensesRows = reportData.expensesBreakdown.map(item => `
+            <tr><td class="text-right pl-8">مصروف: ${item.label}</td><td class="text-red">(${item.amount.toFixed(2)})</td></tr>
+        `).join('');
+
+        const cashOutRows = reportData.cashOut.map(item => `
+            <tr><td class="text-right">${item.label}</td><td class="text-red">(${item.amount.toFixed(2)})</td></tr>
+        `).join('');
+
+        const rowsHtml = `
+            <tr class="bg-green-50"><td colspan="2" class="text-right font-black">النقدية الداخلة (المقبوضات)</td></tr>
+            ${cashInRows || '<tr><td colspan="2" class="text-center text-gray-400">لا توجد مقبوضات</td></tr>'}
+            <tr class="bg-green-100"><td class="text-right font-black">إجمالي النقدية الداخلة</td><td class="font-black text-green">${reportData.totalCashIn.toFixed(2)}</td></tr>
+            
+            <tr class="bg-red-50"><td colspan="2" class="text-right font-black">المصروفات</td></tr>
+            ${expensesRows || '<tr><td colspan="2" class="text-center text-gray-400">لا توجد مصروفات</td></tr>'}
+            <tr class="bg-red-100"><td class="text-right font-black">إجمالي المصروفات</td><td class="font-black text-red">(${reportData.totalExpenses.toFixed(2)})</td></tr>
+            
+            <tr class="bg-red-50"><td colspan="2" class="text-right font-black">النقدية الخارجة (المدفوعات الأخرى)</td></tr>
+            ${cashOutRows || '<tr><td colspan="2" class="text-center text-gray-400">لا توجد مدفوعات أخرى</td></tr>'}
+            <tr class="bg-red-100"><td class="text-right font-black">إجمالي النقدية الخارجة (شامل المصروفات)</td><td class="font-black text-red">(${reportData.totalCashOut.toFixed(2)})</td></tr>
+            
+            <tr class="${reportData.netCashFlow >= 0 ? 'bg-blue-100' : 'bg-orange-100'}">
+                <td class="text-right font-black text-xl">صافي حركة النقدية اليومية</td>
+                <td class="font-black text-xl ${reportData.netCashFlow >= 0 ? 'text-indigo' : 'text-red'}">${reportData.netCashFlow.toFixed(2)}</td>
+            </tr>
         `;
 
-        const cashInHtml = reportData.cashIn.map(item => `
-            <div class="row">
-                <span>${item.label}</span>
-                <span>${item.amount.toFixed(2)}</span>
-            </div>
-        `).join('');
+        const subtitle = `التاريخ: ${formatDateForDisplay(selectedDate)} | الخزينة: ${reportData.treasuryName}`;
+        const title = `تقرير النقدية اليومي`;
 
-        const expensesHtml = reportData.expensesBreakdown.map(item => `
-            <div class="row">
-                <span>مصروف: ${item.label}</span>
-                <span>${item.amount.toFixed(2)}</span>
-            </div>
-        `).join('');
-
-        const cashOutHtml = reportData.cashOut.map(item => `
-            <div class="row">
-                <span>${item.label}</span>
-                <span>${item.amount.toFixed(2)}</span>
-            </div>
-        `).join('');
-
-        printWindow.document.write(`
-            <html dir="rtl">
-                <head>
-                    <title>تقرير النقدية اليومي</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-                    <style>${styles}</style>
-                </head>
-                <body onload="window.print(); window.close();">
-                    <div class="header">
-                        <h1>تقرير النقدية اليومي</h1>
-                        <p>التاريخ: ${new Date(selectedDate).toLocaleDateString('ar-EG')}</p>
-                        <p>الخزينة: ${reportData.treasuryName}</p>
-                    </div>
-
-                    <!-- Cash In -->
-                    <div class="section-title">النقدية الداخلة (المقبوضات)</div>
-                    ${cashInHtml || '<p style="text-align:center;">لا توجد مقبوضات</p>'}
-                    <div class="total-row">
-                        <span>إجمالي النقدية الداخلة</span>
-                        <span>${reportData.totalCashIn.toFixed(2)}</span>
-                    </div>
-
-                    <!-- Expenses -->
-                    <div class="section-title">المصروفات</div>
-                    ${expensesHtml || '<p style="text-align:center;">لا توجد مصروفات</p>'}
-                    <div class="total-row">
-                        <span>إجمالي المصروفات</span>
-                        <span>${reportData.totalExpenses.toFixed(2)}</span>
-                    </div>
-
-                    <!-- Other Cash Out -->
-                    <div class="section-title">النقدية الخارجة (المدفوعات)</div>
-                    ${cashOutHtml || '<p style="text-align:center;">لا توجد مدفوعات أخرى</p>'}
-                    <div class="total-row">
-                        <span>إجمالي النقدية الخارجة (شامل المصروفات)</span>
-                        <span>${reportData.totalCashOut.toFixed(2)}</span>
-                    </div>
-
-                    <!-- Net -->
-                    <div class="net-row">
-                        <span>صافي حركة النقدية اليومية</span>
-                        <span>${reportData.netCashFlow.toFixed(2)}</span>
-                    </div>
-                </body>
-            </html>
-        `);
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml));
         printWindow.document.close();
     };
 

@@ -5,6 +5,7 @@ import type { SalesRepresentative, SalesInvoice, SalesReturn, Customer, CompanyD
 import { ViewIcon, PrintIcon, PdfIcon, ChevronDownIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
 import { formatDateForDisplay } from '../utils';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface SalesRepStatementProps {
     salesRepresentatives: SalesRepresentative[];
@@ -191,59 +192,33 @@ const SalesRepStatement: React.FC<SalesRepStatementProps> = ({
             return;
         }
 
-        const reportHtml = `
-            <html>
-            <head>
-                <title>كشف حساب بائع: ${salesRep.name}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; direction: rtl; }
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    .no-print { display: none !important; }
-                </style>
-            </head>
-            <body class="p-8" onload="window.print(); window.close();">
-                <div class="text-center mb-6 border-b-2 border-black pb-4">
-                    <h1 class="text-3xl font-bold">${companyData.name}</h1>
-                    <p>${companyData.address}</p>
-                </div>
-                <h2 class="text-2xl font-bold text-center mb-2">كشف حساب بائع: ${salesRep.name}</h2>
-                <p class="text-center text-gray-600 mb-4">الفترة من ${formatDateForDisplay(startDate) || 'البداية'} إلى ${formatDateForDisplay(endDate) || 'النهاية'}</p>
+        const headers = ['التاريخ', 'البيان', 'رقم المستند', 'العميل', 'المبيعات', 'المرتجعات', 'القطع'];
 
-                <div class="grid grid-cols-2 gap-4 mb-4 border p-4 rounded">
-                     <div class="text-lg"><strong>صافي المبيعات (قيمة):</strong> <span class="font-bold text-blue-600">${reportData.netSalesValue.toFixed(2)} ج.م</span></div>
-                     <div class="text-lg"><strong>صافي المبيعات (قطع):</strong> <span class="font-bold text-blue-600">${reportData.netSalesQty}</span></div>
-                     <div class="text-lg"><strong>العمولة المحسوبة:</strong> <span class="font-bold text-green-600">${calculatedCommission.toFixed(2)} ج.م</span></div>
+        const rowsHtml = reportData.transactions.map(row => `
+            <tr>
+                <td class="whitespace-nowrap">${new Date(row.date).toLocaleDateString('ar-EG')}</td>
+                <td class="text-right">${row.type}</td>
+                <td>${row.docId}</td>
+                <td class="text-right font-black">${row.customerName}</td>
+                <td class="text-green">${row.salesValue > 0 ? row.salesValue.toFixed(2) : '-'}</td>
+                <td class="text-red">${row.returnsValue > 0 ? row.returnsValue.toFixed(2) : '-'}</td>
+                <td class="font-black">${row.salesQty > 0 ? row.salesQty : `-${row.returnsQty}`}</td>
+            </tr>
+        `).join('');
+
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>صافي المبيعات (قيمة):</span><span class="text-indigo">${reportData.netSalesValue.toFixed(2)}</span></div>
+                <div class="summary-item"><span>صافي المبيعات (قطع):</span><span class="text-indigo">${reportData.netSalesQty}</span></div>
+                <div class="summary-item font-black text-lg border-t-2 border-indigo mt-2 pt-2">
+                    <span>العمولة المحسوبة:</span><span class="text-green">${calculatedCommission.toFixed(2)}</span>
                 </div>
-                <table class="w-full text-right border-collapse border border-gray-400">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            ${['التاريخ', 'البيان', 'رقم المستند', 'العميل', 'قيمة المبيعات', 'قيمة المرتجعات', 'عدد القطع'].map(h => `<th class="p-2 border border-gray-300">${h}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${reportData.transactions.map(row => `
-                            <tr class="border-b">
-                                <td class="p-2 border border-gray-300">${new Date(row.date).toLocaleDateString('ar-EG')}</td>
-                                <td class="p-2 border border-gray-300">${row.type}</td>
-                                <td class="p-2 border border-gray-300">${row.docId}</td>
-                                <td class="p-2 border border-gray-300">${row.customerName}</td>
-                                <td class="p-2 border border-gray-300 text-green-600">${row.salesValue > 0 ? row.salesValue.toFixed(2) : '-'}</td>
-                                <td class="p-2 border border-gray-300 text-red-600">${row.returnsValue > 0 ? row.returnsValue.toFixed(2) : '-'}</td>
-                                <td class="p-2 border border-gray-300">${row.salesQty > 0 ? row.salesQty : `-${row.returnsQty}`}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                <div class="text-center mt-8 text-sm">
-                    <p>${defaultValues.invoiceFooter}</p>
-                </div>
-            </body>
-            </html>
+            </div>
         `;
-        
-        printWindow.document.write(reportHtml);
+
+        const subtitle = `كشف حساب بائع: ${salesRep.name} | الفترة: ${formatDateForDisplay(startDate) || 'البداية'} إلى ${formatDateForDisplay(endDate) || 'النهاية'}`;
+
+        printWindow.document.write(getReportPrintTemplate('كشف حساب بائع', subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

@@ -3,6 +3,7 @@ import { FormattedNumber, CalculatorIcon, PlusCircleIcon, DeleteIcon, PrintIcon,
 import type { CompanyData, Item, Unit, Warehouse, DefaultValues, NotificationType, PurchaseInvoice, Supplier, MgmtUser, PurchaseInvoiceItem, SavedImport, ImportItem, SalesInvoice, SalesReturn, PurchaseReturn } from '../types';
 import { normalizeText, getNextBarcode, generateUniqueId, formatDateForDisplay, searchMatch, roundTo2 } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface ImportCostCalculatorProps {
   companyData: CompanyData;
@@ -414,14 +415,14 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
         <head>
             <title>تحليل تكاليف الاستيراد</title>
             <script src="https://cdn.tailwindcss.com"></script>
-            <style>body { font-family: 'Cairo', sans-serif; padding: 20px; } @page { size: A4 landscape; margin: 0.5in; }</style>
+            <style>body { font-family: 'Cairo', sans-serif; padding: 20px; color: #000000; -webkit-print-color-adjust: exact; print-color-adjust: exact; } @page { size: A4 landscape; margin: 0.5in; }</style>
         </head>
         <body onload="window.print(); window.close();">
-            <div class="text-center mb-6">
-                <h1 class="text-2xl font-bold">${companyData.name}</h1>
-                <h2 class="text-xl">تحليل تكلفة الرسالة الاستيرادية</h2>
+            <div class="text-center mb-6 border-b-2 border-indigo-600 pb-4">
+                <h1 class="text-[18pt] font-black text-indigo-700 m-0">${companyData.name}</h1>
+                <h2 class="text-[12pt] font-bold text-gray-800 mt-1">تحليل تكلفة الرسالة الاستيرادية</h2>
             </div>
-            <div class="grid grid-cols-3 gap-4 mb-4 text-sm border p-4 rounded-lg bg-gray-50">
+            <div class="grid grid-cols-3 gap-4 mb-4 text-[10pt] border p-4 rounded-lg bg-gray-50 text-black">
                 <div>المورد: <span class="font-bold">${supplierSearchQuery || 'غير محدد'}</span></div>
                 <div>رقم اذن الافراج: <span class="font-bold">${supplierInvoiceNumber || '-'}</span></div>
                 <div>التاريخ: <span class="font-bold">${formatDateForDisplay(entryDate)}</span></div>
@@ -429,21 +430,140 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
                 <div>سعر الـ USD/EGP: <span class="font-bold">${usdToEgp}</span></div>
                 <div>نسبة المصاريف الإضافية: <span class="font-bold text-red-600">${(totals.overheadRatio * 100).toFixed(2)}%</span></div>
             </div>
-            <table class="w-full text-right border-collapse border border-gray-400 text-[10px]">
-                <thead><tr class="bg-gray-200">
-                    <th class="p-2 border border-gray-400">م</th><th class="p-2 border border-gray-400">الصنف</th><th class="p-2 border border-gray-400">الكمية</th><th class="p-2 border border-gray-400">السعر RMB</th><th class="p-2 border border-gray-400">سعر FOB (ج.م)</th><th class="p-2 border border-gray-400">نصيب الوحدة</th><th class="p-2 border border-gray-400">تكلفة الوحدة نهائي</th><th class="p-2 border border-gray-400">الإجمالي (ج.م)</th>
+            <table class="w-full text-right border-collapse border border-gray-400 mt-4">
+                <thead><tr class="bg-indigo-600 text-white text-[10pt] font-black">
+                    <th class="p-2 border border-indigo-800 text-center">م</th><th class="p-2 border border-indigo-800 text-center">الصنف</th><th class="p-2 border border-indigo-800 text-center">الكمية</th><th class="p-2 border border-indigo-800 text-center">السعر RMB</th><th class="p-2 border border-indigo-800 text-center">سعر FOB (ج.م)</th><th class="p-2 border border-indigo-800 text-center">نصيب الوحدة</th><th class="p-2 border border-indigo-800 text-center">تكلفة الوحدة نهائي</th><th class="p-2 border border-indigo-800 text-center">الإجمالي (ج.م)</th>
                 </tr></thead>
-                <tbody>${rowsHtml}</tbody>
+                <tbody class="text-[9pt] font-bold text-black">${rowsHtml}</tbody>
             </table>
-            <div class="flex justify-end mt-4">
-                <div class="w-64 space-y-1 text-sm border p-3 rounded bg-gray-50">
-                    <div class="flex justify-between"><span>إجمالي FOB (ج.م):</span><span class="font-bold">${totals.totalFobEgp.toFixed(2)}</span></div>
-                    <div class="flex justify-between"><span>إجمالي المصاريف (ج.م):</span><span class="font-bold">${totals.totalAdditionalFees.toFixed(2)}</span></div>
-                    <div class="flex justify-between text-lg border-t pt-1 mt-1"><span>الصافي النهائي:</span><span class="font-bold text-blue-700">${totals.grandTotalEgp.toFixed(2)}</span></div>
+            <div class="flex justify-between mt-6">
+                <div class="w-72 space-y-2 border-2 border-indigo-600 p-4 rounded-xl bg-gray-50">
+                    <h3 class="text-center font-black text-indigo-700 mb-2 text-[10pt]">إجماليات الرسالة</h3>
+                    <div class="flex justify-between text-[10pt] font-black text-black"><span>اجمالي الرسالة بالـ RMB:</span><span>${totals.totalRmb.toFixed(2)}</span></div>
+                    <div class="flex justify-between text-[10pt] font-black text-black"><span>اجمالي الرسالة بالـ USD:</span><span>${(usdToRmb > 0 ? totals.totalRmb / usdToRmb : 0).toFixed(2)}</span></div>
+                    <div class="flex justify-between mb-0 text-[10pt] font-black text-black"><span>اجمالي الرسالة بالـ EGP:</span><span>${totals.totalFobEgp.toFixed(2)}</span></div>
+                    <div class="text-right text-[9pt] text-black mb-2">(الجميع قبل اضافة المصاريف)</div>
+                    <div class="flex flex-col text-center border-t border-gray-300 pt-2 mt-2 gap-1">
+                        <span class="text-indigo-700 text-[9pt] font-normal">المبلغ النهائي للرسالة بعد المصروفات بالجنيه المصري:</span>
+                        <span class="font-black text-indigo-700 text-[12pt]">${totals.grandTotalEgp.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="w-64 space-y-2 border-2 border-indigo-600 p-4 rounded-xl bg-gray-50">
+                    <div class="flex justify-between text-[10pt] font-black text-black"><span>إجمالي FOB (ج.م):</span><span>${totals.totalFobEgp.toFixed(2)}</span></div>
+                    <div class="flex justify-between text-[10pt] font-black text-black"><span>إجمالي المصاريف (ج.م):</span><span>${totals.totalAdditionalFees.toFixed(2)}</span></div>
+                    <div class="flex justify-between border-t border-gray-300 pt-2 mt-2 text-[10pt] font-black text-indigo-700"><span>الصافي النهائي:</span><span class="text-[12pt]">${totals.grandTotalEgp.toFixed(2)}</span></div>
                 </div>
             </div>
         </body></html>
     `);
+    printWindow.document.close();
+  };
+
+  const handlePrintMessage = (msg: SavedImport) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const headers = [
+      'م',
+      'الصنف',
+      'الكمية',
+      'السعر (RMB)',
+      'الإجمالي (RMB)',
+      'السعر (EGP)',
+      'نصيب الوحدة من المصاريف (EGP)',
+      'التكلفة النهائية للقطعة (EGP)',
+      'الإجمالي (EGP)'
+    ];
+
+    const expenses = msg.expenses || { shipping: 0, customs: 0, clearance: 0, commissions: 0, others: 0 };
+    const totals = getCalculatedTotals(msg.items, expenses, msg.usdToRmb, msg.usdToEgp);
+
+    let totalQty = 0;
+    let totalRmb = 0;
+    let totalRmbSum = 0;
+    let totalEgp = 0;
+    let totalUnitShare = 0;
+    let totalLandedCost = 0;
+    let totalRowEgp = 0;
+
+    const rowsHtml = totals.calculatedRows.map((it, index) => {
+      totalQty += it.qty;
+      totalRmb += it.priceRmb;
+      totalRmbSum += (it.priceRmb * it.qty);
+      totalEgp += it.priceEgp;
+      totalUnitShare += it.unitShareOfFees;
+      totalLandedCost += it.unitLandedCostEgp;
+      totalRowEgp += it.rowTotalEgp;
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${it.name}</td>
+          <td>${it.qty}</td>
+          <td>${it.priceRmb.toFixed(2)}</td>
+          <td>${(it.priceRmb * it.qty).toFixed(2)}</td>
+          <td>${it.priceEgp.toFixed(2)}</td>
+          <td style="color: #dc2626;">${it.unitShareOfFees.toFixed(2)}</td>
+          <td style="color: #4f46e5; font-weight: 900;">${it.unitLandedCostEgp.toFixed(2)}</td>
+          <td style="font-weight: 900;">${it.rowTotalEgp.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalsRowHtml = `
+      <tr style="background-color: #e0e7ff !important; font-weight: 900;">
+        <td colspan="2" style="text-align: center; color: #4f46e5;">الإجمالي الكلي</td>
+        <td style="color: #4f46e5;">${totalQty}</td>
+        <td style="color: #4f46e5;">${totalRmb.toFixed(2)}</td>
+        <td style="color: #4f46e5;">${totalRmbSum.toFixed(2)}</td>
+        <td style="color: #4f46e5;">${totalEgp.toFixed(2)}</td>
+        <td style="color: #dc2626;">${totalUnitShare.toFixed(2)}</td>
+        <td style="color: #4f46e5;">${totalLandedCost.toFixed(2)}</td>
+        <td style="color: #4f46e5;">${totalRowEgp.toFixed(2)}</td>
+      </tr>
+    `;
+
+    const finalRowsHtml = rowsHtml + totalsRowHtml;
+
+    const totalExpenses = expenses.shipping + expenses.customs + expenses.clearance + expenses.commissions + expenses.others;
+
+    const summaryHtml = `
+      <div style="width: 100%;">
+        <h3 style="text-align: center; margin-bottom: 15px; color: #4f46e5; font-weight: 900; font-size: 10pt;">تفاصيل المصاريف</h3>
+        <div class="summary-item"><span>الشحن:</span> <span>${expenses.shipping.toFixed(2)} ج.م</span></div>
+        <div class="summary-item"><span>الجمارك:</span> <span>${expenses.customs.toFixed(2)} ج.م</span></div>
+        <div class="summary-item"><span>التخليص:</span> <span>${expenses.clearance.toFixed(2)} ج.م</span></div>
+        <div class="summary-item"><span>العمولات:</span> <span>${expenses.commissions.toFixed(2)} ج.م</span></div>
+        <div class="summary-item"><span>أخرى:</span> <span>${expenses.others.toFixed(2)} ج.م</span></div>
+        <div class="summary-item" style="color: #dc2626; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;"><span>إجمالي المصاريف:</span> <span>${totalExpenses.toFixed(2)} ج.م</span></div>
+        <div class="summary-item" style="color: #4f46e5; margin-top: 10px;"><span>إجمالي الرسالة:</span> <span style="font-size: 12pt;">${totals.grandTotalEgp.toFixed(2)} ج.م</span></div>
+      </div>
+    `;
+
+    const totalUsd = msg.usdToRmb > 0 ? totals.totalRmb / msg.usdToRmb : 0;
+    const secondarySummaryHtml = `
+      <div style="width: 100%;">
+        <h3 style="text-align: center; margin-bottom: 15px; color: #4f46e5; font-weight: 900; font-size: 10pt;">إجماليات الرسالة</h3>
+        <div class="summary-item"><span>اجمالي الرسالة بالـ RMB:</span> <span>${totals.totalRmb.toFixed(2)}</span></div>
+        <div class="summary-item"><span>اجمالي الرسالة بالـ USD:</span> <span>${totalUsd.toFixed(2)}</span></div>
+        <div class="summary-item" style="margin-bottom: 2px;"><span>اجمالي الرسالة بالـ EGP:</span> <span>${totals.totalFobEgp.toFixed(2)}</span></div>
+        <div style="text-align: right; font-size: 9pt; color: #000000; margin-bottom: 10px;">(الجميع قبل اضافة المصاريف)</div>
+        <div class="summary-item" style="color: #4f46e5; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px; flex-direction: column; text-align: center; gap: 5px;">
+            <span style="font-size: 9pt; font-weight: normal;">المبلغ النهائي للرسالة بعد المصروفات بالجنيه المصري:</span>
+            <span style="font-size: 12pt; font-weight: 900;">${totals.grandTotalEgp.toFixed(2)}</span>
+        </div>
+      </div>
+    `;
+
+    printWindow.document.write(getReportPrintTemplate(
+      `تفاصيل الرسالة الاستيرادية: ${msg.messageName}`, 
+      `التاريخ: ${new Date(msg.timestamp).toLocaleString('ar-EG')}`, 
+      companyData, 
+      headers, 
+      finalRowsHtml,
+      summaryHtml,
+      secondarySummaryHtml
+    ));
     printWindow.document.close();
   };
 
@@ -637,7 +757,9 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
       {/* History Log Modal */}
       <Modal title="سجل الرسائل الاستيرادية" show={isLogModalOpen} onClose={() => setIsLogModalOpen(false)}>
           <div className="space-y-4">
-              <input type="text" value={logSearchQuery} onChange={e => setLogSearchQuery(e.target.value)} placeholder="بحث باسم الرسالة أو رقم اذن الافراج..." className={inputClass} />
+              <div className="flex justify-between items-center gap-4">
+                  <input type="text" value={logSearchQuery} onChange={e => setLogSearchQuery(e.target.value)} placeholder="بحث باسم الرسالة أو رقم اذن الافراج..." className={`${inputClass} flex-1`} />
+              </div>
               <div className="overflow-auto max-h-[60vh] border rounded-lg">
                   <table className="w-full text-right border-collapse">
                       <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0 font-bold">
@@ -666,6 +788,7 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
                                   </td>
                                   <td className="p-3 border text-center">
                                       <div className="flex justify-center gap-2">
+                                          <button onClick={() => handlePrintMessage(msg)} className="p-1.5 text-gray-700 hover:bg-gray-200 rounded-full transition-all" title="طباعة الرسالة"><PrintIcon className="w-5 h-5" /></button>
                                           <button onClick={() => loadSavedMessage(msg, true)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-full transition-all" title="عرض"><ViewIcon /></button>
                                           <button onClick={() => loadSavedMessage(msg, false)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-full transition-all" title="تعديل واستعادة"><EditIcon /></button>
                                           {msg.status !== 'synced' && (

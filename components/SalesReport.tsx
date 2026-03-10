@@ -4,6 +4,7 @@ import type { SalesInvoice, SalesReturn, Item, Customer, SalesRepresentative, Wa
 import { ViewIcon, PrintIcon, ChevronDownIcon, FormattedNumber, ArchiveIcon, SwitchHorizontalIcon, ShoppingCartIcon } from './Shared';
 import { searchMatch, formatDateForDisplay } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface SalesReportProps {
     salesInvoices: SalesInvoice[];
@@ -243,36 +244,32 @@ const SalesReport: React.FC<SalesReportProps> = ({
         if (!printWindow) return;
         
         const isSummary = reportData.type === 'summary';
+        const headers = isSummary 
+            ? ['رقم', 'التاريخ', 'العميل', 'النوع', 'الصافي']
+            : ['الفاتورة', 'التاريخ', 'الصنف', 'الكمية', 'السعر', 'الإجمالي'];
+
         const rowsHtml = reportData.rows.map(r => `
-            <tr class="border-b">
-                <td class="p-2 border border-gray-300 text-center">${r.docId}</td>
-                <td class="p-2 border border-gray-300 text-center">${formatDateForDisplay(r.date)}</td>
-                <td class="p-2 border border-gray-300">${r.customerName}</td>
-                <td class="p-2 border border-gray-300 text-center">${r.type} (${r.paymentType})</td>
-                ${!isSummary ? `<td class="p-2 border border-gray-300">${(r as DetailedReportRow).itemName}</td>` : ''}
-                ${!isSummary ? `<td class="p-2 border border-gray-300 text-center">${(r as DetailedReportRow).quantity}</td>` : ''}
-                <td class="p-2 border border-gray-300 text-center font-bold">${isSummary ? (r as SummaryReportRow).net.toFixed(2) : (r as DetailedReportRow).total.toFixed(2)}</td>
+            <tr>
+                <td>${r.docId}</td>
+                <td>${formatDateForDisplay(r.date)}</td>
+                <td class="text-right">${isSummary ? r.customerName : (r as DetailedReportRow).itemName}</td>
+                <td>${isSummary ? `${r.type} (${r.paymentType})` : Math.floor((r as DetailedReportRow).quantity)}</td>
+                ${!isSummary ? `<td>${(r as DetailedReportRow).price.toFixed(2)}</td>` : ''}
+                <td class="font-black text-indigo">${isSummary ? (r as SummaryReportRow).net.toFixed(2) : (r as DetailedReportRow).total.toFixed(2)}</td>
             </tr>
         `).join('');
 
-        printWindow.document.write(`
-            <html dir="rtl"><head><title>تقرير المبيعات</title><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"><style>body { font-family: 'Cairo', sans-serif; padding: 20px; }</style></head>
-            <body onload="window.print();window.close()">
-                <div class="text-center mb-6">
-                    <h1 class="text-2xl font-bold">${companyData.name}</h1>
-                    <h2 class="text-xl">تقرير مبيعات ${isSummary ? 'إجمالي' : 'تفصيلي'}</h2>
-                    <p>الفترة من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}</p>
-                </div>
-                <table class="w-full text-right border-collapse border border-gray-400 text-sm">
-                    <thead><tr class="bg-gray-100">
-                        <th class="p-2 border border-gray-400">رقم</th><th class="p-2 border border-gray-400">التاريخ</th><th class="p-2 border border-gray-400">العميل</th><th class="p-2 border border-gray-400">النوع</th>
-                        ${!isSummary ? '<th class="p-2 border border-gray-400">الصنف</th><th class="p-2 border border-gray-400">الكمية</th>' : ''}
-                        <th class="p-2 border border-gray-400">الصافي</th>
-                    </tr></thead>
-                    <tbody>${rowsHtml}</tbody>
-                </table>
-            </body></html>
-        `);
+        const summaryHtml = `
+            <div class="summary-item"><span>إجمالي المبيعات:</span><span>${reportData.totalSales.toFixed(2)}</span></div>
+            <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-red">-${reportData.totalReturns.toFixed(2)}</span></div>
+            <div class="summary-item"><span>صافي المبيعات:</span><span class="text-green">${reportData.netSales.toFixed(2)}</span></div>
+            <div class="summary-item"><span>صافي الأرباح:</span><span class="text-indigo">${reportData.totalProfit.toFixed(2)}</span></div>
+        `;
+
+        const subtitle = `الفترة من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}`;
+        const title = `تقرير مبيعات ${isSummary ? 'إجمالي' : 'تفصيلي'}`;
+
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

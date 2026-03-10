@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { ChatChannel, ChatMessage, MgmtUser, Department, OnlineSession } from '../types';
 import { MessageSquare, X, Mic, Phone, Trash2, Edit2, Check, CheckCheck, Headset, MoreVertical, Search, Paperclip, Smile, Send, ArrowLeft, FileText, Image as ImageIcon, Maximize2, Minimize2, Volume2, VolumeX } from 'lucide-react';
 import { Modal } from './Shared';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface ChatProps {
@@ -44,6 +44,15 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
     const [isMuted, setIsMuted] = useState(false);
     const [selectedStation, setSelectedStation] = useState({ name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://n0a.radiojar.com/8s5u5tpdtwzuv' });
     const [isRadioPlaying, setIsRadioPlaying] = useState(false);
+    const [isLiveActive, setIsLiveActive] = useState(false);
+    const [liveTranscription, setLiveTranscription] = useState('');
+    
+    const liveSessionRef = useRef<any>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+    const audioInputRef = useRef<MediaStream | null>(null);
+    const audioQueueRef = useRef<Int16Array[]>([]);
+    const isPlayingRef = useRef(false);
     
     const stations = [
         { name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://n0a.radiojar.com/8s5u5tpdtwzuv' },
@@ -438,26 +447,168 @@ ${dataContext}
         }
     };
 
-    const handleCall = () => {
-        const senderId = currentUser?.id || -1;
-        const senderName = currentUser?.fullName || 'زائر';
+    const handleCall = async () => {
+        if (activeChannelId !== 'support') {
+            alert("ميزة المكالمات الصوتية المباشرة (WebRTC) قيد التطوير. تم إرسال إشعار للفرع الآخر.");
+            return;
+        }
 
-        const message: ChatMessage = {
-            id: Date.now().toString(),
-            channelId: activeChannelId,
-            senderId: senderId,
-            senderName: senderName,
-            text: '📞 بدأ مكالمة صوتية...',
-            timestamp: Date.now(),
-            isCall: true
-        };
+        if (isLiveActive) {
+            stopLiveSession();
+            return;
+        }
 
-        setChatMessages(prev => {
-            const safePrev = Array.isArray(prev) ? prev : [];
-            return [...safePrev, message];
-        });
+        startLiveSession();
+    };
+
+    const startLiveSession = async () => {
+        try {
+            const apiKey = (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined) || import.meta.env.VITE_GEMINI_API_KEY || '';
+            const ai = new GoogleGenAI({ apiKey });
+
+            const session = await ai.live.connect({
+                model: "gemini-2.5-flash-native-audio-preview-09-2025",
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
+                    },
+                    systemInstruction: "أنت مساعد ذكي للدعم الفني. تحدث باللغة العربية بشكل طبيعي وودود.",
+                },
+                callbacks: {
+                    onopen: () => {
+                        setIsLiveActive(true);
+                        startAudioCapture();
+                    },
+                    onmessage: async (message: LiveServerMessage) => {
+                        if (message.serverContent?.modelTurn?.parts[0]?.inlineData?.data) {
+                            const base64Audio = message.serverContent.modelTurn.parts[0].inlineData.data;
+                            const binaryString = atob(base64Audio);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) {
+                                bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            const pcmData = new Int16Array(bytes.buffer);
+                            audioQueueRef.current.push(pcmData);
+                            if (!isPlayingRef.current) {
+                                playNextInQueue();
+                            }
+                        }
+                        
+                        if (message.serverContent?.interrupted) {
+                            audioQueueRef.current = [];
+                            isPlayingRef.current = false;
+                        }
+                    },
+                    onclose: () => {
+                        stopLiveSession();
+                    },
+                    onerror: (error) => {
+                        console.error("Live API Error:", error);
+                        stopLiveSession();
+                    }
+                }
+            });
+
+            liveSessionRef.current = session;
+        } catch (error) {
+            console.error("Failed to start live session:", error);
+            alert("فشل بدء الاتصال المباشر. يرجى التحقق من اتصال الإنترنت وصلاحيات الميكروفون.");
+        }
+    };
+
+    const stopLiveSession = () => {
+        setIsLiveActive(false);
+        setLiveTranscription('');
+        if (liveSessionRef.current) {
+            liveSessionRef.current.close();
+            liveSessionRef.current = null;
+        }
+        stopAudioCapture();
+    };
+
+    const startAudioCapture = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioInputRef.current = stream;
+            
+            const audioContext = new AudioContext({ sampleRate: 16000 });
+            audioContextRef.current = audioContext;
+
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+
+            await audioContext.audioWorklet.addModule(URL.createObjectURL(new Blob([`
+                class AudioProcessor extends AudioWorkletProcessor {
+                    process(inputs, outputs, parameters) {
+                        const input = inputs[0][0];
+                        if (input) {
+                            const pcmData = new Int16Array(input.length);
+                            for (let i = 0; i < input.length; i++) {
+                                pcmData[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
+                            }
+                            this.port.postMessage(pcmData);
+                        }
+                        return true;
+                    }
+                }
+                registerProcessor('audio-processor', AudioProcessor);
+            `], { type: 'application/javascript' })));
+
+            const source = audioContext.createMediaStreamSource(stream);
+            const processor = new AudioWorkletNode(audioContext, 'audio-processor');
+            
+            processor.port.onmessage = (event) => {
+                const pcmData = event.data;
+                if (liveSessionRef.current && isLiveActive) {
+                    const base64Data = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
+                    liveSessionRef.current.sendRealtimeInput({
+                        media: { data: base64Data, mimeType: 'audio/pcm;rate=16000' }
+                    });
+                }
+            };
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+            workletNodeRef.current = processor;
+        } catch (error) {
+            console.error("Audio capture error:", error);
+        }
+    };
+
+    const stopAudioCapture = () => {
+        if (audioInputRef.current) {
+            audioInputRef.current.getTracks().forEach(track => track.stop());
+            audioInputRef.current = null;
+        }
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+        workletNodeRef.current = null;
+    };
+
+    const playNextInQueue = async () => {
+        if (audioQueueRef.current.length === 0 || !audioContextRef.current) {
+            isPlayingRef.current = false;
+            return;
+        }
+
+        isPlayingRef.current = true;
+        const pcmData = audioQueueRef.current.shift()!;
+        const audioBuffer = audioContextRef.current.createBuffer(1, pcmData.length, 16000);
+        const channelData = audioBuffer.getChannelData(0);
         
-        alert("ميزة المكالمات الصوتية المباشرة (WebRTC) قيد التطوير. تم إرسال إشعار للفرع الآخر.");
+        for (let i = 0; i < pcmData.length; i++) {
+            channelData[i] = pcmData[i] / 0x7FFF;
+        }
+
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        source.onended = () => playNextInQueue();
+        source.start();
     };
 
     const clearChat = () => {
@@ -532,7 +683,6 @@ ${dataContext}
                 ref={radioAudioRef} 
                 src={selectedStation.url} 
                 preload="none"
-                crossOrigin="anonymous"
                 onEnded={() => setIsRadioPlaying(false)}
                 onError={(e) => {
                     const target = e.target as HTMLAudioElement;
@@ -631,7 +781,7 @@ ${dataContext}
                             <button onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "تصغير" : "تكبير"}>
                                 {isExpanded ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                             </button>
-                            <button onClick={handleCall} title="اتصال">
+                            <button onClick={handleCall} title={isLiveActive ? "إنهاء الاتصال" : "اتصال مباشر"} className={isLiveActive ? "text-red-400 animate-pulse" : ""}>
                                 <Phone size={20} />
                             </button>
                             <button title="بحث">
@@ -676,6 +826,22 @@ ${dataContext}
                                 backgroundImage: `radial-gradient(#008069 1px, transparent 1px)`,
                                 backgroundSize: '20px 20px'
                             }}></div>
+
+                            {isLiveActive && (
+                                <div className="sticky top-0 z-20 bg-red-50/90 backdrop-blur-sm border border-red-200 rounded-lg p-3 mb-4 flex items-center gap-3 shadow-sm animate-fade-in">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-red-700">اتصال مباشر نشط مع المساعد الذكي</p>
+                                        <p className="text-[10px] text-red-600">تحدث الآن، المساعد يستمع إليك...</p>
+                                    </div>
+                                    <button 
+                                        onClick={stopLiveSession}
+                                        className="bg-red-500 text-white text-[10px] px-3 py-1 rounded-full font-bold hover:bg-red-600 transition-colors"
+                                    >
+                                        إنهاء
+                                    </button>
+                                </div>
+                            )}
 
                             {activeChannelId === 'quran' ? (
                                 <div className="flex flex-col items-center justify-center h-full text-center space-y-6 p-4">

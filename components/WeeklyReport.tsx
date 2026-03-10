@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import type { SalesInvoice, SalesReturn, Item, CustomerReceipt, PurchaseInvoice, PurchaseReturn, CompanyData, DefaultValues } from '../types';
 import { PrintIcon, FormattedNumber } from './Shared';
 import { formatDateForDisplay } from '../utils';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface WeeklyReportProps {
     salesInvoices: SalesInvoice[];
@@ -234,70 +235,28 @@ const WeeklyReport: React.FC<WeeklyReportProps> = ({
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const tableRows = reportData.map((row) => `
-            <tr class="border-b border-gray-300">
-                <td class="p-2 border border-gray-300 font-bold">${row.weekLabel}</td>
-                <td class="p-2 border border-gray-300">${formatNumberWithCommas(row.openingStockCost)}</td>
-                <td class="p-2 border border-gray-300">${formatNumberWithCommas(row.openingStockSell)}</td>
-                <td class="p-2 border border-gray-300 bg-gray-50">${formatNumberWithCommas(row.netSalesCost)}</td>
-                <td class="p-2 border border-gray-300 bg-gray-50 font-bold text-blue-600">${formatNumberWithCommas(row.netSalesSell)}</td>
-                <td class="p-2 border border-gray-300 font-bold text-green-600">${formatNumberWithCommas(row.grossProfit)}</td>
-                <td class="p-2 border border-gray-300 dir-ltr text-center font-bold ${row.salesGrowth >= 0 ? 'text-green-600' : 'text-red-600'}">
+        const headers = ['فترة الأسبوع', 'أول المدة (تكلفة)', 'أول المدة (بيع)', 'المبيعات (تكلفة)', 'المبيعات (بيع)', 'هامش الربح', 'النمو %', 'إجمالي الخصم', 'التحصيلات'];
+
+        const rowsHtml = reportData.map((row) => `
+            <tr>
+                <td class="font-bold text-right">${row.weekLabel}</td>
+                <td>${row.openingStockCost.toFixed(2)}</td>
+                <td>${row.openingStockSell.toFixed(2)}</td>
+                <td>${row.netSalesCost.toFixed(2)}</td>
+                <td class="font-black text-indigo">${row.netSalesSell.toFixed(2)}</td>
+                <td class="font-black text-green">${row.grossProfit.toFixed(2)}</td>
+                <td class="font-black ${row.salesGrowth >= 0 ? 'text-green' : 'text-red'}">
                     ${row.salesGrowth.toFixed(1)}% ${row.salesGrowth > 0 ? '↑' : row.salesGrowth < 0 ? '↓' : '-'}
                 </td>
-                <td class="p-2 border border-gray-300 font-bold text-orange-600">${formatNumberWithCommas(row.totalDiscounts)}</td>
-                <td class="p-2 border border-gray-300 font-bold text-purple-600">${formatNumberWithCommas(row.cashCollections)}</td>
+                <td class="text-red">${row.totalDiscounts.toFixed(2)}</td>
+                <td class="font-black text-indigo">${row.cashCollections.toFixed(2)}</td>
             </tr>
         `).join('');
 
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>التقرير الأسبوعي للأرباح</title>
-                    <script src="https://cdn.tailwindcss.com"></script>
-                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
-                    <style>
-                        body { font-family: 'Cairo', sans-serif; direction: rtl; }
-                        table { width: 100%; border-collapse: collapse; text-align: center; }
-                        th, td { border: 1px solid #ccc; padding: 8px; font-size: 14px; }
-                        thead { background-color: #f3f4f6; }
-                    </style>
-                </head>
-                <body class="p-8" onload="window.print(); window.close();">
-                    <div class="text-center mb-6 border-b-2 border-black pb-4">
-                        <h1 class="text-2xl font-bold">${companyData.name}</h1>
-                        <h2 class="text-xl">التقرير الأسبوعي الشامل</h2>
-                        <p class="text-gray-600">الأسبوع: من الاثنين إلى الأحد</p>
-                    </div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th rowspan="2" class="align-middle">فترة الأسبوع</th>
-                                <th colspan="2">أصناف أول المدة</th>
-                                <th colspan="2">صافي المبيعات</th>
-                                <th rowspan="2" class="align-middle">هامش الربح</th>
-                                <th rowspan="2" class="align-middle">النمو %</th>
-                                <th rowspan="2" class="align-middle">إجمالي الخصم</th>
-                                <th rowspan="2" class="align-middle">التحصيلات النقدية</th>
-                            </tr>
-                            <tr>
-                                <th>تكلفة</th>
-                                <th>بيع</th>
-                                <th>تكلفة</th>
-                                <th>بيع</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                    <div class="text-center mt-8 text-sm">
-                        <p>${defaultValues.invoiceFooter}</p>
-                    </div>
-                </body>
-            </html>
-        `);
+        const subtitle = `تقرير أداء أسبوعي لآخر ${numberOfWeeks} أسابيع`;
+        const title = `التقرير الأسبوعي الشامل`;
+
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml));
         printWindow.document.close();
     };
 

@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
-import { FormattedNumber } from './Shared';
+import { FormattedNumber, PrintIcon } from './Shared';
 import type { CustomerReceipt, Customer, Treasury, CompanyData } from '../types';
-import { searchMatch } from '../utils';
+import { searchMatch, formatDateForDisplay } from '../utils';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface CustomerReceiptRegisterProps {
     customerReceipts: CustomerReceipt[];
@@ -57,6 +58,41 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
 
     const filteredTotal = useMemo(() => filteredReceipts.reduce((sum, r) => sum + r.amount, 0), [filteredReceipts]);
 
+    const handlePrint = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const headers = ['رقم السند', 'التاريخ', 'اسم العميل', 'طريقة القبض', 'المبلغ', 'الخزينة'];
+
+        const rowsHtml = filteredReceipts.map(r => {
+            const customer = customers.find(c => c.id === r.customerId);
+            const treasury = treasuries.find(t => t.id === r.treasuryId);
+            const methodLabel = r.paymentMethod === 'cash' ? 'نقدي' : r.paymentMethod === 'check' ? 'شيك' : 'خصم مسموح به';
+            return `
+                <tr>
+                    <td>${r.id}</td>
+                    <td class="whitespace-nowrap">${new Date(r.date).toLocaleDateString('ar-EG')}</td>
+                    <td class="text-right font-black">${customer?.name || '-'}</td>
+                    <td>${methodLabel}</td>
+                    <td class="text-green font-black">${r.amount.toFixed(2)}</td>
+                    <td>${treasury?.name || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>عدد السندات:</span><span>${filteredReceipts.length}</span></div>
+                <div class="summary-item font-black text-lg border-t-2 border-indigo mt-2 pt-2">
+                    <span>إجمالي المبالغ:</span><span class="text-green">${filteredTotal.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+
+        printWindow.document.write(getReportPrintTemplate('سجل سندات القبض', '', companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.close();
+    };
+
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
     const filterInputClass = "h-9 w-full px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white";
 
@@ -64,7 +100,10 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-indigo-800 dark:text-indigo-300">سجل سندات القبض</h1>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
+                    <button onClick={handlePrint} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2 shadow-md">
+                        <PrintIcon /> <span>طباعة السجل</span>
+                    </button>
                     <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-2 px-4 rounded-lg text-center shadow-sm">
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">إجمالي المبالغ</p>
                         <p className="text-xl font-black text-green-700 dark:text-green-300"><FormattedNumber value={filteredTotal} /></p>

@@ -1,14 +1,17 @@
 
 import React, { useState } from 'react';
 import type { SalesRepresentative, SalesInvoice, SalesReturn } from '../types';
-import { ViewIcon } from './Shared';
+import { ViewIcon, PrintIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
+import { formatDateForDisplay } from '../utils';
 
 interface AllSalesRepsStatementProps {
     salesRepresentatives: SalesRepresentative[];
     salesInvoices: SalesInvoice[];
     salesReturns: SalesReturn[];
     onViewSalesRepStatement: (repId: number, startDate: string, endDate: string) => void;
+    companyData: any;
 }
 
 interface SalesRepSummary {
@@ -23,6 +26,7 @@ const AllSalesRepsStatement: React.FC<AllSalesRepsStatementProps> = ({
     salesInvoices,
     salesReturns,
     onViewSalesRepStatement,
+    companyData,
 }) => {
     const [startDate, setStartDate] = useState<string>(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -30,6 +34,27 @@ const AllSalesRepsStatement: React.FC<AllSalesRepsStatementProps> = ({
 
     const startDateInputProps = useDateInput(startDate, setStartDate);
     const endDateInputProps = useDateInput(endDate, setEndDate);
+
+    const handlePrint = () => {
+        if (!reportData) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const headers = ['م', 'اسم البائع', 'صافي المبيعات (قيمة)', 'صافي المبيعات (قطع)'];
+
+        const rowsHtml = reportData.map((summary, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="text-right font-black">${summary.repName}</td>
+                <td class="text-blue font-black">${summary.netSalesValue.toFixed(2)}</td>
+                <td class="font-black">${summary.netSalesQty}</td>
+            </tr>
+        `).join('');
+
+        const subtitle = `الفترة من ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)}`;
+        printWindow.document.write(getReportPrintTemplate('تقرير أداء البائعين', subtitle, companyData, headers, rowsHtml, ''));
+        printWindow.document.close();
+    };
 
     const handleSearch = () => {
         const summaries = salesRepresentatives.map(rep => {
@@ -80,10 +105,15 @@ const AllSalesRepsStatement: React.FC<AllSalesRepsStatementProps> = ({
                         <label className={labelClass} htmlFor="end-date">إلى تاريخ</label>
                         <input id="end-date" type="text" className={inputClass} {...endDateInputProps} />
                     </div>
-                    <div className="md:col-span-2">
-                        <button onClick={handleSearch} className="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    <div className="md:col-span-2 flex gap-2">
+                        <button onClick={handleSearch} className="flex-1 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
                             بحث
                         </button>
+                        {reportData && (
+                            <button onClick={handlePrint} className="flex-1 bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 flex items-center justify-center">
+                                <PrintIcon /> <span className="mr-2">طباعة</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

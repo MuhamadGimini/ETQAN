@@ -167,22 +167,26 @@ const UpdateManagement: React.FC<UpdateManagementProps> = ({ licenseStatus, late
                             )}
 
                             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg text-right max-w-2xl mx-auto mb-6">
-                                <h4 className="font-bold mb-2">طريقة التحديث:</h4>
+                                <h4 className="font-bold mb-2">طريقة التحديث (لنسخة سطح المكتب):</h4>
                                 <ol className="list-decimal list-inside space-y-2 text-sm">
-                                    <li>قم بتحميل ملف التحديث من الرابط أدناه.</li>
-                                    <li>قم بفك ضغط الملف الجديد.</li>
-                                    <li>استبدل الملفات القديمة بالملفات الجديدة في مجلد البرنامج.</li>
-                                    <li>أعد تشغيل البرنامج. (ستجد بياناتك كما هي).</li>
+                                    <li>اضغط على زر <strong>"تحميل التحديث"</strong> بالأسفل للذهاب إلى صفحة الإصدارات على GitHub.</li>
+                                    <li>من صفحة GitHub، ابحث عن قسم <strong>Assets</strong> في أسفل الإصدار الجديد.</li>
+                                    <li>قم بتحميل الملف المضغوط (عادة يكون بامتداد <code>.zip</code> أو <code>.rar</code>).</li>
+                                    <li>بعد التحميل، قم بفك ضغط الملف.</li>
+                                    <li>انسخ جميع الملفات الجديدة الناتجة عن فك الضغط.</li>
+                                    <li>اذهب إلى المجلد الذي قمت بتثبيت البرنامج فيه على جهازك.</li>
+                                    <li>قم بلصق الملفات الجديدة ووافق على <strong>استبدال (Replace)</strong> الملفات القديمة.</li>
+                                    <li>أعد تشغيل البرنامج. (ستجد بياناتك كما هي محفوظة بأمان).</li>
                                 </ol>
                             </div>
 
                             <a 
-                                href={downloadUrl || '#'} 
+                                href={downloadUrl || 'https://github.com/MuhamadGimini/ETQAN/releases'} 
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-colors"
                             >
-                                تحميل التحديث
+                                تحميل التحديث من GitHub
                             </a>
                         </div>
                     ) : (

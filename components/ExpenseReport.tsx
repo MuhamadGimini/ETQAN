@@ -3,6 +3,8 @@ import React, { useState, useMemo } from 'react';
 import type { Expense, ExpenseCategory, Treasury, CompanyData, DefaultValues } from '../types';
 import { PrintIcon, FormattedNumber } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
+import { formatDateForDisplay } from '../utils';
 
 interface ExpenseReportProps {
     expenses: Expense[];
@@ -59,78 +61,34 @@ const ExpenseReport: React.FC<ExpenseReportProps> = ({
             return;
         }
 
-        const tableRows = reportData.map((exp, index) => {
+        const headers = ['م', 'التاريخ', 'بند المصروف', 'الخزينة', 'ملاحظات', 'المبلغ', 'بواسطة'];
+
+        const rowsHtml = reportData.map((exp, index) => {
             const category = expenseCategories.find(c => c.id === exp.categoryId)?.name || 'غير معروف';
             const treasury = treasuries.find(t => t.id === exp.treasuryId)?.name || 'غير معروف';
             
             return `
-                <tr class="border-b border-gray-200">
-                    <td class="p-2 border border-gray-300 text-center">${index + 1}</td>
-                    <td class="p-2 border border-gray-300">${new Date(exp.date).toLocaleDateString('ar-EG')}</td>
-                    <td class="p-2 border border-gray-300 font-bold">${category}</td>
-                    <td class="p-2 border border-gray-300">${treasury}</td>
-                    <td class="p-2 border border-gray-300">${exp.notes || '-'}</td>
-                    <td class="p-2 border border-gray-300 font-bold text-red-600">${exp.amount.toFixed(2)}</td>
-                    <td class="p-2 border border-gray-300 text-sm">${exp.createdBy || ''}</td>
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${formatDateForDisplay(exp.date)}</td>
+                    <td class="text-right">${category}</td>
+                    <td class="text-right">${treasury}</td>
+                    <td class="text-right text-sm">${exp.notes || '-'}</td>
+                    <td class="font-black text-red">${exp.amount.toFixed(2)}</td>
+                    <td class="text-sm">${exp.createdBy || ''}</td>
                 </tr>
             `;
         }).join('');
 
-        const reportHtml = `
-            <html>
-            <head>
-                <title>تقرير المصروفات</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; direction: rtl; }
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                </style>
-            </head>
-            <body class="p-8" onload="window.print(); window.close();">
-                <div class="text-center mb-6 border-b-2 border-black pb-4">
-                    <h1 class="text-3xl font-bold">${companyData.name}</h1>
-                    <p>${companyData.address}</p>
-                </div>
-                <h2 class="text-2xl font-bold text-center mb-2">تقرير المصروفات</h2>
-                <p class="text-center text-gray-600 mb-6">للفترة من ${new Date(startDate).toLocaleDateString('ar-EG')} إلى ${new Date(endDate).toLocaleDateString('ar-EG')}</p>
-                
-                <div class="mb-4 flex justify-between items-center bg-gray-100 p-4 rounded border border-gray-300">
-                    <div>عدد الحركات: <strong>${reportData.length}</strong></div>
-                    <div>إجمالي المصروفات: <strong class="text-xl text-red-600">${totalAmount.toFixed(2)} ج.م</strong></div>
-                </div>
-
-                <table class="w-full text-right border-collapse border border-gray-400">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="p-2 border border-gray-300 w-10">م</th>
-                            <th class="p-2 border border-gray-300">التاريخ</th>
-                            <th class="p-2 border border-gray-300">بند المصروف</th>
-                            <th class="p-2 border border-gray-300">الخزينة</th>
-                            <th class="p-2 border border-gray-300">ملاحظات</th>
-                            <th class="p-2 border border-gray-300">المبلغ</th>
-                            <th class="p-2 border border-gray-300">بواسطة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${tableRows}
-                    </tbody>
-                    <tfoot>
-                        <tr class="bg-gray-100 font-bold">
-                            <td colspan="5" class="p-2 border border-gray-300 text-center">الإجمالي</td>
-                            <td class="p-2 border border-gray-300 text-red-600">${totalAmount.toFixed(2)}</td>
-                            <td class="p-2 border border-gray-300"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-                <div class="text-center mt-8 text-sm">
-                    <p>${defaultValues.invoiceFooter}</p>
-                </div>
-            </body>
-            </html>
+        const summaryHtml = `
+            <div class="summary-item"><span>عدد الحركات:</span><span>${reportData.length}</span></div>
+            <div class="summary-item"><span>إجمالي المصروفات:</span><span class="text-red">${totalAmount.toFixed(2)}</span></div>
         `;
 
-        printWindow.document.write(reportHtml);
+        const subtitle = `الفترة من ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)}`;
+        const title = `تقرير المصروفات التفصيلي`;
+
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 

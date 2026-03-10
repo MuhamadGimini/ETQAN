@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
-import { FormattedNumber } from './Shared';
+import { FormattedNumber, PrintIcon } from './Shared';
 import type { SupplierPayment, Supplier, Treasury, CompanyData } from '../types';
-import { searchMatch } from '../utils';
+import { searchMatch, formatDateForDisplay } from '../utils';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface SupplierPaymentRegisterProps {
     supplierPayments: SupplierPayment[];
@@ -57,6 +58,41 @@ const SupplierPaymentRegister: React.FC<SupplierPaymentRegisterProps> = ({
 
     const filteredTotal = useMemo(() => filteredPayments.reduce((sum, p) => sum + p.amount, 0), [filteredPayments]);
 
+    const handlePrint = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const headers = ['رقم السند', 'التاريخ', 'اسم المورد', 'طريقة الدفع', 'المبلغ', 'الخزينة'];
+
+        const rowsHtml = filteredPayments.map(p => {
+            const supplier = suppliers.find(s => s.id === p.supplierId);
+            const treasury = treasuries.find(t => t.id === p.treasuryId);
+            const methodLabel = p.paymentMethod === 'cash' ? 'نقدي' : p.paymentMethod === 'check' ? 'شيك' : 'خصم مكتسب';
+            return `
+                <tr>
+                    <td>${p.id}</td>
+                    <td class="whitespace-nowrap">${new Date(p.date).toLocaleDateString('ar-EG')}</td>
+                    <td class="text-right font-black">${supplier?.name || '-'}</td>
+                    <td>${methodLabel}</td>
+                    <td class="text-red font-black">${p.amount.toFixed(2)}</td>
+                    <td>${treasury?.name || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>عدد السندات:</span><span>${filteredPayments.length}</span></div>
+                <div class="summary-item font-black text-lg border-t-2 border-indigo mt-2 pt-2">
+                    <span>إجمالي المبالغ:</span><span class="text-red">${filteredTotal.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+
+        printWindow.document.write(getReportPrintTemplate('سجل سندات الدفع', '', companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.close();
+    };
+
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
     const filterInputClass = "h-9 w-full px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none dark:text-white";
 
@@ -64,7 +100,10 @@ const SupplierPaymentRegister: React.FC<SupplierPaymentRegisterProps> = ({
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-teal-800 dark:text-teal-300">سجل سندات الدفع</h1>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
+                    <button onClick={handlePrint} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2 shadow-md">
+                        <PrintIcon /> <span>طباعة السجل</span>
+                    </button>
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-2 px-4 rounded-lg text-center shadow-sm">
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">إجمالي المبالغ</p>
                         <p className="text-xl font-black text-red-700 dark:text-red-300"><FormattedNumber value={filteredTotal} /></p>

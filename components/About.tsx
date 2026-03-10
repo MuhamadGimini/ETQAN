@@ -94,6 +94,9 @@ const About: React.FC<AboutProps> = ({ updateAvailable, onNavigate, activeDataba
                 </h2>
                 <ul className="space-y-3 list-disc list-inside text-gray-700 dark:text-gray-300 text-lg">
                     <li>
+                        <span className="font-bold text-blue-600 dark:text-blue-400">نظام المحادثة والمساعد الذكي (الشات):</span> إضافة نظام دردشة متكامل يربط بين الموظفين، مع مساعد ذكي (AI) لتحليل البيانات والإجابة على الاستفسارات المالية، ودعم الأوامر الصوتية، بالإضافة إلى مشغل مدمج لإذاعة القرآن الكريم.
+                    </li>
+                    <li>
                         <span className="font-bold text-blue-600 dark:text-blue-400">تعدد المخازن في الفواتير:</span> إمكانية اختيار مخزن مختلف لكل صنف داخل فاتورة المشتريات، مرتجع المبيعات، ومرتجع المشتريات.
                     </li>
                     <li>

@@ -1,14 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
 import type { SalesInvoice, SalesReturn, Item, Customer, SalesInvoiceItem } from '../types';
-import { ChartBarIcon, FormattedNumber } from './Shared';
+import { ChartBarIcon, FormattedNumber, PrintIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
+import { formatDateForDisplay } from '../utils';
 
 interface AnalysisReportProps {
     salesInvoices: SalesInvoice[];
     salesReturns: SalesReturn[];
     items: Item[];
     customers: Customer[];
+    companyData: any; // Added companyData to props
 }
 
 interface AggregatedItem {
@@ -25,7 +28,7 @@ interface AggregatedCustomer {
     totalPurchaseValue: number;
 }
 
-const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesReturns, items, customers }) => {
+const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesReturns, items, customers, companyData }) => {
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const today = new Date().toISOString().split('T')[0];
     
@@ -34,6 +37,36 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
 
     const startDateInputProps = useDateInput(startDate, setStartDate);
     const endDateInputProps = useDateInput(endDate, setEndDate);
+
+    const handlePrint = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const headers = ['الصنف', 'الكمية المباعة', 'إجمالي الإيراد', 'صافي الربح'];
+        
+        // Use top sold by qty as the main table for printing analysis
+        const rowsHtml = reportData.topSoldByQty.map((item, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="text-right font-black">${item.name}</td>
+                <td class="font-black text-blue">${item.totalQty}</td>
+                <td>${item.totalRevenue.toFixed(2)}</td>
+                <td class="text-green">${item.totalProfit.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>أفضل صنف (كمية):</span><span class="font-black">${reportData.topSoldByQty[0]?.name || '-'}</span></div>
+                <div class="summary-item"><span>أفضل صنف (ربح):</span><span class="font-black">${reportData.topSoldByProfit[0]?.name || '-'}</span></div>
+                <div class="summary-item"><span>أفضل عميل:</span><span class="font-black">${reportData.topCustomers[0]?.name || '-'}</span></div>
+            </div>
+        `;
+
+        const subtitle = `تحليل الأداء للفترة: ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)}`;
+        printWindow.document.write(getReportPrintTemplate('تقرير تحليل الأداء', subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.close();
+    };
 
     const reportData = useMemo(() => {
         const itemMap = new Map<number, AggregatedItem>();
@@ -167,6 +200,11 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
                     <div>
                         <label className={labelClass}>إلى تاريخ</label>
                         <input type="text" {...endDateInputProps} className={inputClass} />
+                    </div>
+                    <div>
+                        <button onClick={handlePrint} className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 flex items-center justify-center">
+                            <PrintIcon /> <span className="mr-2">طباعة التقرير</span>
+                        </button>
                     </div>
                 </div>
             </div>

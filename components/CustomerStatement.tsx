@@ -3,6 +3,7 @@ import type { Customer, SalesInvoice, SalesReturn, CustomerReceipt, CompanyData,
 import { ViewIcon, PrintIcon, PdfIcon, FormattedNumber, ChevronDownIcon, WhatsAppIcon } from './Shared';
 import { formatNumberWithSmallerDecimals, formatNumber, formatPhoneNumberForWhatsApp, formatDateForDisplay } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
 
 interface CustomerStatementProps {
     customers: Customer[];
@@ -321,128 +322,43 @@ ${defaultValues.whatsappFooter}`;
             return;
         }
 
-        const reportHtml = `
-            <html dir="rtl">
-            <head>
-                <title>كشف حساب عميل: ${customer.name}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
-                    .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-                    .logo-section { width: 33%; text-align: left; }
-                    .logo-section img { max-width: 140px; max-height: 90px; object-fit: contain; }
-                    .company-center { width: 33%; text-align: center; }
-                    .company-center h1 { margin: 0; font-size: 1.6rem; font-weight: 900; color: #1e3a8a; }
-                    .invoice-badge { display: inline-block; border: 2px solid #1e3a8a; color: #1e3a8a; padding: 4px 15px; border-radius: 6px; margin-top: 8px; font-weight: 900; font-size: 1.1rem; }
-                    .doc-info { width: 33%; text-align: right; }
-                    
-                    .details-block { margin: 15px 0; font-size: 12pt; border-right: 4px solid #1e3a8a; padding-right: 12px; }
-                    .details-block p { margin: 4px 0; font-weight: bold; }
-                    .bold { font-weight: bold; }
-                    .heavy { font-weight: 900; }
+        const headers = ['م', 'رقم المستند', 'التاريخ', 'البيان', ...(statementData.type === 'detailed' ? ['الكمية * السعر'] : []), 'مدين', 'دائن', 'الرصيد'];
 
-                    table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #1e3a8a; }
-                    th { background: #1e3a8a; color: white; padding: 8px; text-align: center; font-size: 10pt; border: 1px solid #1e3a8a; }
-                    td { padding: 6px; border: 1px solid #ddd; text-align: center; font-size: 10pt; font-weight: bold; }
-                    
-                    .item-row:nth-child(even) { background-color: #f8fafc; }
-                    
-                    @media print {
-                        .item-row:nth-child(even) { background-color: transparent !important; }
-                        th { background: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact !important; }
-                        .invoice-badge { border-color: #1e3a8a !important; color: #1e3a8a !important; -webkit-print-color-adjust: exact !important; }
-                        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    }
+        const rowsHtml = statementData.rows.map((row, index) => {
+            const isSummaryRow = row.id === 'opening-balance' || row.id === 'closing-balance';
+            const dateCell = row.date ? new Date(row.date).toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+            return `
+                <tr class="${isSummaryRow ? 'bg-gray-100 font-black' : ''}">
+                    <td>${isSummaryRow ? '-' : index}</td>
+                    <td>${row.docId !== 0 ? row.docId : '-'}</td>
+                    <td class="whitespace-nowrap">${dateCell}</td>
+                    <td class="text-right">${row.type}</td>
+                    ${statementData.type === 'detailed' ? `<td>${row.qtyPrice || '-'}</td>` : ''}
+                    <td class="text-green">${row.debit > 0 ? row.debit.toFixed(2) : '-'}</td>
+                    <td class="text-red">${row.credit > 0 ? row.credit.toFixed(2) : '-'}</td>
+                    <td class="font-black">${row.balance.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
 
-                    .summary-section { display: flex; justify-content: flex-end; margin-top: 15px; }
-                    .summary-box { width: 300px; border: 1px solid #1e3a8a; border-radius: 8px; padding: 10px; background: #f8fafc; }
-                    .summary-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #ddd; font-weight: bold; font-size: 10pt; }
-                    .summary-row.total { border-bottom: none; border-top: 2px solid #1e3a8a; margin-top: 5px; padding-top: 8px; color: #1e3a8a; font-size: 12pt; }
-                    
-                    .footer-block { margin-top: 40px; border-top: 2px solid #1e3a8a; padding-top: 15px; display: flex; justify-content: space-between; font-size: 10pt; font-weight: bold; }
-                    .thanks { text-align: center; margin-top: 20px; font-weight: 900; color: #475569; font-size: 11pt; }
-                    .nowrap { white-space: nowrap; }
-                </style>
-            </head>
-            <body onload="window.print(); window.close();">
-                <div class="header-top">
-                    <div class="doc-info">
-                         <p class="heavy">التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
-                         <p class="heavy">الفترة: ${startDate ? formatDateForDisplay(startDate) : 'البداية'} إلى ${endDate ? formatDateForDisplay(endDate) : 'الآن'}</p>
-                    </div>
-                    <div class="company-center">
-                        <h1>${companyData.name}</h1>
-                        <div class="invoice-badge">كشف حساب عميل ${statementData.type === 'detailed' ? '(تفصيلي)' : '(إجمالي)'}</div>
-                    </div>
-                    <div class="logo-section">
-                        ${companyData.logo ? `<img src="${companyData.logo}" />` : ''}
-                    </div>
+        const summaryHtml = `
+            <div class="w-full mt-4">
+                <div class="summary-item"><span>رصيد سابق:</span><span>${statementData.openingBalance.toFixed(2)}</span></div>
+                <div class="summary-item"><span>إجمالي المبيعات:</span><span class="text-indigo">${totalSales.toFixed(2)}</span></div>
+                <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-red">-${totalReturns.toFixed(2)}</span></div>
+                <div class="summary-item"><span>المدفوعات:</span><span class="text-green">-${payments.toFixed(2)}</span></div>
+                <div class="summary-item"><span>الخصم المسموح:</span><span class="text-orange">-${discounts.toFixed(2)}</span></div>
+                <div class="summary-item font-black text-lg border-t-2 border-indigo pt-2">
+                    <span>الرصيد النهائي:</span>
+                    <span class="${statementData.closingBalance >= 0 ? 'text-green' : 'text-red'}">${statementData.closingBalance.toFixed(2)}</span>
                 </div>
-
-                <div class="details-block">
-                    <p>السيد/ ${customer.name}</p>
-                    <p>تليفون: ${customer.phone || '-'}</p>
-                    <p>الرصيد السابق: <span style="color: #dc2626;">${statementData.openingBalance.toFixed(2)}</span></p>
-                </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 30px;">م</th>
-                            <th style="width: 80px;">رقم المستند</th>
-                            <th style="width: 90px;">التاريخ</th>
-                            <th>البيان</th>
-                            ${statementData.type === 'detailed' ? '<th style="width: 100px;">الكمية * السعر</th>' : ''}
-                            <th style="width: 80px;">مدين</th>
-                            <th style="width: 80px;">دائن</th>
-                            <th style="width: 100px;">الرصيد</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                         ${statementData.rows.map((row, index) => {
-                            const isSummaryRow = row.id === 'opening-balance' || row.id === 'closing-balance';
-                            if (isSummaryRow) return '';
-                            const dateCell = row.date ? new Date(row.date).toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
-                            return `
-                                <tr class="item-row">
-                                    <td>${index}</td>
-                                    <td>${row.docId !== 0 ? row.docId : '-'}</td>
-                                    <td class="nowrap">${dateCell}</td>
-                                    <td style="text-align: right;">${row.type}</td>
-                                    ${statementData.type === 'detailed' ? `<td>${row.qtyPrice || '-'}</td>` : ''}
-                                    <td style="color: #059669;">${row.debit > 0 ? row.debit.toFixed(2) : '-'}</td>
-                                    <td style="color: #dc2626;">${row.credit > 0 ? row.credit.toFixed(2) : '-'}</td>
-                                    <td class="heavy">${row.balance.toFixed(2)}</td>
-                                </tr>
-                            `;
-                         }).join('')}
-                    </tbody>
-                </table>
-
-                <div class="summary-section">
-                    <div class="summary-box">
-                        <div class="summary-row"><span>رصيد سابق:</span><span>${statementData.openingBalance.toFixed(2)}</span></div>
-                        <div class="summary-row"><span>إجمالي المبيعات:</span><span style="color: #1e3a8a;">${totalSales.toFixed(2)}</span></div>
-                        <div class="summary-row"><span>إجمالي المرتجعات:</span><span style="color: #dc2626;">-${totalReturns.toFixed(2)}</span></div>
-                        <div class="summary-row"><span>المدفوعات:</span><span style="color: #059669;">-${payments.toFixed(2)}</span></div>
-                        <div class="summary-row"><span>الخصم المسموح:</span><span style="color: #ea580c;">-${discounts.toFixed(2)}</span></div>
-                        <div class="summary-row total"><span class="heavy">الرصيد النهائي:</span><span class="heavy">${statementData.closingBalance.toFixed(2)}</span></div>
-                    </div>
-                </div>
-
-                <div class="footer-block">
-                    <div style="text-align: right; width: 50%;">العنوان: ${companyData.address}</div>
-                    <div style="text-align: left; width: 50%;">تليفون: ${companyData.phone1} ${companyData.phone2 ? ' - ' + companyData.phone2 : ''}</div>
-                </div>
-
-                <div class="thanks">
-                    ${defaultValues.invoiceFooter || 'شكراً لزيارتكم ونتمنى رؤيتكم مرة أخرى'}
-                </div>
-            </body>
-            </html>
+            </div>
         `;
-        
-        printWindow.document.write(reportHtml);
+
+        const subtitle = `كشف حساب عميل: ${customer.name} | الفترة: ${startDate ? formatDateForDisplay(startDate) : 'البداية'} إلى ${endDate ? formatDateForDisplay(endDate) : 'الآن'}`;
+        const title = `كشف حساب عميل ${statementData.type === 'detailed' ? '(تفصيلي)' : '(إجمالي)'}`;
+
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
         printWindow.document.close();
     };
 
