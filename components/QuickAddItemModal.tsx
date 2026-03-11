@@ -166,7 +166,15 @@ const QuickAddItemModal: React.FC<QuickAddItemModalProps> = ({
                                     if(e.target.value === '') setNewItemData(prev => ({...prev, unitId: 0}));
                                 }}
                                 onFocus={() => setIsUnitSuggestionsOpen(true)}
-                                onBlur={() => setTimeout(() => setIsUnitSuggestionsOpen(false), 200)}
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isUnitSuggestionsOpen && suggestedUnits.length > 0 && unitSearchQuery) {
+                                            setNewItemData(prev => ({...prev, unitId: suggestedUnits[0].id}));
+                                            setUnitSearchQuery(suggestedUnits[0].name);
+                                        }
+                                        setIsUnitSuggestionsOpen(false);
+                                    }, 250);
+                                }}
                                 className={inputClass}
                                 placeholder="اختر الوحدة..."
                                 autoComplete="off"
@@ -202,7 +210,15 @@ const QuickAddItemModal: React.FC<QuickAddItemModalProps> = ({
                                     if(e.target.value === '') setNewItemData(prev => ({...prev, warehouseId: 0}));
                                 }}
                                 onFocus={() => setIsWarehouseSuggestionsOpen(true)}
-                                onBlur={() => setTimeout(() => setIsWarehouseSuggestionsOpen(false), 200)}
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isWarehouseSuggestionsOpen && suggestedWarehouses.length > 0 && warehouseSearchQuery) {
+                                            setNewItemData(prev => ({...prev, warehouseId: suggestedWarehouses[0].id}));
+                                            setWarehouseSearchQuery(suggestedWarehouses[0].name);
+                                        }
+                                        setIsWarehouseSuggestionsOpen(false);
+                                    }, 250);
+                                }}
                                 className={inputClass}
                                 placeholder="اختر المخزن..."
                                 autoComplete="off"

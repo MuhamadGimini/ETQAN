@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import type { SalesInvoice, SalesReturn, Item, Customer, SalesInvoiceItem } from '../types';
-import { ChartBarIcon, FormattedNumber, PrintIcon } from './Shared';
+import { ChartBarIcon, FormattedNumber, PrintIcon, ChevronDownIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
 import { getReportPrintTemplate } from '../utils/printing';
 import { formatDateForDisplay } from '../utils';
@@ -11,7 +11,7 @@ interface AnalysisReportProps {
     salesReturns: SalesReturn[];
     items: Item[];
     customers: Customer[];
-    companyData: any; // Added companyData to props
+    companyData: any;
 }
 
 interface AggregatedItem {
@@ -28,51 +28,29 @@ interface AggregatedCustomer {
     totalPurchaseValue: number;
 }
 
+type FilterType = 
+    | 'top_items_qty' 
+    | 'least_items_qty' 
+    | 'top_items_profit' 
+    | 'least_items_profit' 
+    | 'top_customers' 
+    | 'least_customers';
+
 const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesReturns, items, customers, companyData }) => {
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const today = new Date().toISOString().split('T')[0];
     
     const [startDate, setStartDate] = useState<string>(firstDayOfMonth);
     const [endDate, setEndDate] = useState<string>(today);
+    const [activeFilter, setActiveFilter] = useState<FilterType>('top_items_qty');
 
     const startDateInputProps = useDateInput(startDate, setStartDate);
     const endDateInputProps = useDateInput(endDate, setEndDate);
-
-    const handlePrint = () => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-
-        const headers = ['الصنف', 'الكمية المباعة', 'إجمالي الإيراد', 'صافي الربح'];
-        
-        // Use top sold by qty as the main table for printing analysis
-        const rowsHtml = reportData.topSoldByQty.map((item, index) => `
-            <tr>
-                <td>${index + 1}</td>
-                <td class="text-right font-black">${item.name}</td>
-                <td class="font-black text-blue">${item.totalQty}</td>
-                <td>${item.totalRevenue.toFixed(2)}</td>
-                <td class="text-green">${item.totalProfit.toFixed(2)}</td>
-            </tr>
-        `).join('');
-
-        const summaryHtml = `
-            <div class="w-full mt-4">
-                <div class="summary-item"><span>أفضل صنف (كمية):</span><span class="font-black">${reportData.topSoldByQty[0]?.name || '-'}</span></div>
-                <div class="summary-item"><span>أفضل صنف (ربح):</span><span class="font-black">${reportData.topSoldByProfit[0]?.name || '-'}</span></div>
-                <div class="summary-item"><span>أفضل عميل:</span><span class="font-black">${reportData.topCustomers[0]?.name || '-'}</span></div>
-            </div>
-        `;
-
-        const subtitle = `تحليل الأداء للفترة: ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)}`;
-        printWindow.document.write(getReportPrintTemplate('تقرير تحليل الأداء', subtitle, companyData, headers, rowsHtml, summaryHtml));
-        printWindow.document.close();
-    };
 
     const reportData = useMemo(() => {
         const itemMap = new Map<number, AggregatedItem>();
         const customerMap = new Map<number, AggregatedCustomer>();
 
-        // 0. Initialize itemMap with ALL items to ensure dead stock (zero sales) are included
         items.forEach(item => {
             if (!itemMap.has(item.id)) {
                 itemMap.set(item.id, {
@@ -85,12 +63,9 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
             }
         });
 
-        // 1. Process Sales
         salesInvoices.forEach(inv => {
             const invDate = inv.date.split('T')[0];
             if (invDate >= startDate && invDate <= endDate) {
-                
-                // Process Customer Data
                 const customerTotal = (inv.items.reduce((acc, i) => acc + i.price * i.quantity, 0) - inv.discount) * (1 + inv.tax / 100);
                 if (!customerMap.has(inv.customerId)) {
                     const cust = customers.find(c => c.id === inv.customerId);
@@ -99,13 +74,10 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
                 const custEntry = customerMap.get(inv.customerId)!;
                 custEntry.totalPurchaseValue += customerTotal;
 
-
-                // Process Items Data
                 inv.items.forEach(saleItem => {
                     const itemDef = items.find(i => i.id === saleItem.itemId);
                     if (!itemDef) return;
 
-                    // We use get() directly because we initialized all items in step 0
                     const entry = itemMap.get(saleItem.itemId);
                     if (entry) {
                         const revenue = saleItem.quantity * saleItem.price;
@@ -120,17 +92,14 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
             }
         });
 
-        // 2. Process Returns (Subtract from Sales)
         salesReturns.forEach(ret => {
             const retDate = ret.date.split('T')[0];
             if (retDate >= startDate && retDate <= endDate) {
-                 // Process Customer Data
                  const customerTotal = (ret.items.reduce((acc, i) => acc + i.price * i.quantity, 0) - ret.discount) * (1 + ret.tax / 100);
                  if (customerMap.has(ret.customerId)) {
                      customerMap.get(ret.customerId)!.totalPurchaseValue -= customerTotal;
                  }
 
-                // Process Items Data
                 ret.items.forEach(retItem => {
                     const itemDef = items.find(i => i.id === retItem.itemId);
                     if (!itemDef) return;
@@ -153,14 +122,77 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
         const customersArray = Array.from(customerMap.values());
 
         return {
+            itemsArray,
+            customersArray,
             topSoldByQty: [...itemsArray].filter(i => i.totalQty > 0).sort((a, b) => b.totalQty - a.totalQty).slice(0, 5),
             topSoldByProfit: [...itemsArray].filter(i => i.totalQty > 0).sort((a, b) => b.totalProfit - a.totalProfit).slice(0, 5),
             topSoldByRevenue: [...itemsArray].filter(i => i.totalQty > 0).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5),
-            // Least sold includes items with 0 sales (Dead Stock)
             leastSoldByQty: [...itemsArray].sort((a, b) => a.totalQty - b.totalQty).slice(0, 5),
             topCustomers: [...customersArray].sort((a, b) => b.totalPurchaseValue - a.totalPurchaseValue).slice(0, 5),
         };
     }, [salesInvoices, salesReturns, items, customers, startDate, endDate]);
+
+    const filteredDetailedData = useMemo(() => {
+        switch (activeFilter) {
+            case 'top_items_qty':
+                return [...reportData.itemsArray].sort((a, b) => b.totalQty - a.totalQty);
+            case 'least_items_qty':
+                return [...reportData.itemsArray].sort((a, b) => a.totalQty - b.totalQty);
+            case 'top_items_profit':
+                return [...reportData.itemsArray].sort((a, b) => b.totalProfit - a.totalProfit);
+            case 'least_items_profit':
+                return [...reportData.itemsArray].sort((a, b) => a.totalProfit - b.totalProfit);
+            case 'top_customers':
+                return [...reportData.customersArray].sort((a, b) => b.totalPurchaseValue - a.totalPurchaseValue);
+            case 'least_customers':
+                return [...reportData.customersArray].sort((a, b) => a.totalPurchaseValue - b.totalPurchaseValue);
+            default:
+                return [];
+        }
+    }, [reportData, activeFilter]);
+
+    const handlePrint = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        let headers: string[] = [];
+        let rowsHtml = '';
+
+        if (activeFilter.includes('customers')) {
+            headers = ['م', 'العميل', 'إجمالي المشتريات'];
+            rowsHtml = (filteredDetailedData as AggregatedCustomer[]).map((c, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="text-right font-black">${c.name}</td>
+                    <td class="font-black text-blue">${c.totalPurchaseValue.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        } else {
+            headers = ['م', 'الصنف', 'الكمية المباعة', 'إجمالي الإيراد', 'صافي الربح'];
+            rowsHtml = (filteredDetailedData as AggregatedItem[]).map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="text-right font-black">${item.name}</td>
+                    <td class="font-black text-blue">${item.totalQty}</td>
+                    <td>${item.totalRevenue.toFixed(2)}</td>
+                    <td class="text-green">${item.totalProfit.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        const filterNames: Record<FilterType, string> = {
+            'top_items_qty': 'أكثر الأصناف مبيعاً (كمية)',
+            'least_items_qty': 'أقل الأصناف مبيعاً (كمية)',
+            'top_items_profit': 'أكثر الأصناف تحقيقاً للربح',
+            'least_items_profit': 'أقل الأصناف تحقيقاً للربح',
+            'top_customers': 'أكثر العملاء شراء',
+            'least_customers': 'أقل العملاء شراء'
+        };
+
+        const subtitle = `تحليل الأداء للفترة: ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)} - ${filterNames[activeFilter]}`;
+        printWindow.document.write(getReportPrintTemplate('التقرير التفصيلي للتحليل', subtitle, companyData, headers, rowsHtml, ''));
+        printWindow.document.close();
+    };
 
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
     const inputClass = "w-full px-4 py-3 bg-black/5 dark:bg-white/5 rounded-lg shadow-[inset_3px_3px_7px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 transition duration-300";
@@ -168,7 +200,6 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
     const tableHeaderClass = "p-3 text-lg font-semibold text-gray-600 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600";
     const tableCellClass = "p-3 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700";
 
-    // Helper to render a "Best Item" card
     const BestItemCard = ({ title, item, metricLabel, metricValue, colorClass }: { title: string, item?: AggregatedItem, metricLabel: string, metricValue?: string, colorClass: string }) => (
         <div className={`${cardClass} flex flex-col items-center justify-center text-center transform hover:scale-105 transition duration-300`}>
             <div className={`p-3 rounded-full ${colorClass} text-white mb-3`}>
@@ -190,9 +221,8 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
         <div className="space-y-8">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">تحليل أداء الأصناف والمبيعات</h1>
             
-            {/* Filter Section */}
             <div className={cardClass}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
                         <label className={labelClass}>من تاريخ</label>
                         <input type="text" {...startDateInputProps} className={inputClass} />
@@ -201,15 +231,9 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
                         <label className={labelClass}>إلى تاريخ</label>
                         <input type="text" {...endDateInputProps} className={inputClass} />
                     </div>
-                    <div>
-                        <button onClick={handlePrint} className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 flex items-center justify-center">
-                            <PrintIcon /> <span className="mr-2">طباعة التقرير</span>
-                        </button>
-                    </div>
                 </div>
             </div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <BestItemCard 
                     title="الأكثر مبيعاً (كمية)" 
@@ -246,95 +270,77 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
                 </div>
             </div>
 
-            {/* Detailed Tables Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Top 5 Quantity */}
-                <div className={cardClass}>
-                    <h3 className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-4 border-b pb-2 border-blue-200">أعلى 5 أصناف مبيعاً (كمية)</h3>
-                    <table className="w-full text-right">
-                        <thead>
-                            <tr>
-                                <th className={tableHeaderClass}>الصنف</th>
-                                <th className={tableHeaderClass}>الكمية</th>
-                                <th className={tableHeaderClass}>الإيراد</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reportData.topSoldByQty.map(item => (
-                                <tr key={item.id}>
-                                    <td className={tableCellClass}>{item.name}</td>
-                                    <td className={tableCellClass + " font-bold text-blue-600"}>{item.totalQty}</td>
-                                    <td className={tableCellClass}><FormattedNumber value={item.totalRevenue} /></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <div className={cardClass}>
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">التقرير التفصيلي</h2>
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                        <div className="relative w-full md:w-64">
+                            <select 
+                                value={activeFilter} 
+                                onChange={(e) => setActiveFilter(e.target.value as FilterType)}
+                                className={`${inputClass} appearance-none pr-10`}
+                            >
+                                <option value="top_items_qty">أكثر الأصناف مبيعاً (كمية)</option>
+                                <option value="least_items_qty">أقل الأصناف مبيعاً (كمية)</option>
+                                <option value="top_items_profit">أكثر الأصناف تحقيقاً للربح</option>
+                                <option value="least_items_profit">أقل الأصناف تحقيقاً للربح</option>
+                                <option value="top_customers">أكثر العملاء شراء</option>
+                                <option value="least_customers">أقل العملاء شراء</option>
+                            </select>
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                <ChevronDownIcon />
+                            </div>
+                        </div>
+                        <button onClick={handlePrint} className="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 flex items-center justify-center whitespace-nowrap">
+                            <PrintIcon /> <span className="mr-2">طباعة</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Top 5 Profit */}
-                <div className={cardClass}>
-                    <h3 className="text-xl font-bold text-green-700 dark:text-green-300 mb-4 border-b pb-2 border-green-200">أعلى 5 أصناف ربحية</h3>
+                <div className="overflow-x-auto">
                     <table className="w-full text-right">
                         <thead>
-                            <tr>
-                                <th className={tableHeaderClass}>الصنف</th>
-                                <th className={tableHeaderClass}>الربح</th>
-                                <th className={tableHeaderClass}>هامش الربح %</th>
-                            </tr>
+                            {activeFilter.includes('customers') ? (
+                                <tr>
+                                    <th className={tableHeaderClass}>م</th>
+                                    <th className={tableHeaderClass}>العميل</th>
+                                    <th className={tableHeaderClass}>إجمالي المشتريات</th>
+                                </tr>
+                            ) : (
+                                <tr>
+                                    <th className={tableHeaderClass}>م</th>
+                                    <th className={tableHeaderClass}>الصنف</th>
+                                    <th className={tableHeaderClass}>الكمية المباعة</th>
+                                    <th className={tableHeaderClass}>إجمالي الإيراد</th>
+                                    <th className={tableHeaderClass}>صافي الربح</th>
+                                </tr>
+                            )}
                         </thead>
                         <tbody>
-                            {reportData.topSoldByProfit.map(item => (
-                                <tr key={item.id}>
-                                    <td className={tableCellClass}>{item.name}</td>
-                                    <td className={tableCellClass + " font-bold text-green-600"}><FormattedNumber value={item.totalProfit} /></td>
-                                    <td className={tableCellClass}>{item.totalRevenue > 0 ? ((item.totalProfit / item.totalRevenue) * 100).toFixed(1) : '0'}%</td>
+                            {activeFilter.includes('customers') ? (
+                                (filteredDetailedData as AggregatedCustomer[]).map((c, index) => (
+                                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                        <td className={tableCellClass}>{index + 1}</td>
+                                        <td className={tableCellClass + " font-bold"}>{c.name}</td>
+                                        <td className={tableCellClass + " font-bold text-blue-600"}><FormattedNumber value={c.totalPurchaseValue} /></td>
+                                    </tr>
+                                ))
+                            ) : (
+                                (filteredDetailedData as AggregatedItem[]).map((item, index) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                        <td className={tableCellClass}>{index + 1}</td>
+                                        <td className={tableCellClass + " font-bold"}>{item.name}</td>
+                                        <td className={tableCellClass + " font-bold text-blue-600"}>{item.totalQty}</td>
+                                        <td className={tableCellClass}><FormattedNumber value={item.totalRevenue} /></td>
+                                        <td className={tableCellClass + " font-bold text-green-600"}><FormattedNumber value={item.totalProfit} /></td>
+                                    </tr>
+                                ))
+                            )}
+                            {filteredDetailedData.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="p-4 text-center text-gray-500">لا توجد بيانات</td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                 {/* Top 5 Revenue */}
-                <div className={cardClass}>
-                    <h3 className="text-xl font-bold text-purple-700 dark:text-purple-300 mb-4 border-b pb-2 border-purple-200">أعلى 5 أصناف إيراداً (Revenue)</h3>
-                    <table className="w-full text-right">
-                        <thead>
-                            <tr>
-                                <th className={tableHeaderClass}>الصنف</th>
-                                <th className={tableHeaderClass}>الإيراد</th>
-                                <th className={tableHeaderClass}>الكمية</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reportData.topSoldByRevenue.map(item => (
-                                <tr key={item.id}>
-                                    <td className={tableCellClass}>{item.name}</td>
-                                    <td className={tableCellClass + " font-bold text-purple-600"}><FormattedNumber value={item.totalRevenue} /></td>
-                                    <td className={tableCellClass}>{item.totalQty}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                 {/* Dead Stock */}
-                 <div className={cardClass}>
-                    <h3 className="text-xl font-bold text-red-700 dark:text-red-300 mb-4 border-b pb-2 border-red-200">الأصناف الراكدة (الأقل مبيعاً أو صفر مبيعات)</h3>
-                    <table className="w-full text-right">
-                        <thead>
-                            <tr>
-                                <th className={tableHeaderClass}>الصنف</th>
-                                <th className={tableHeaderClass}>الكمية المباعة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reportData.leastSoldByQty.length > 0 ? reportData.leastSoldByQty.map(item => (
-                                <tr key={item.id}>
-                                    <td className={tableCellClass}>{item.name}</td>
-                                    <td className={tableCellClass + " font-bold text-red-600"}>{item.totalQty}</td>
-                                </tr>
-                            )) : <tr><td colSpan={2} className="p-3 text-center text-gray-500">لا توجد بيانات</td></tr>}
+                            )}
                         </tbody>
                     </table>
                 </div>

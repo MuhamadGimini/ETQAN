@@ -266,8 +266,15 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
                         </div>
                         <div className="flex-[30%] min-w-[200px] relative z-[40]" ref={customerDropdownRef}>
                             <label className={labelClass}>العميل</label>
-                             <div className="relative">
-                                <input type="text" value={customerSearchQuery} onChange={handleCustomerSearchChange} onFocus={() => setIsCustomerSuggestionsOpen(true)} placeholder="ابحث بالاسم..." className={inputClass} disabled={isViewing} autoComplete="off" />
+                            <div className="relative">
+                                <input type="text" value={customerSearchQuery} onChange={handleCustomerSearchChange} onFocus={() => setIsCustomerSuggestionsOpen(true)} onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isCustomerSuggestionsOpen && suggestedCustomers.length > 0 && customerSearchQuery) {
+                                            handleCustomerSelect(suggestedCustomers[0]);
+                                        }
+                                        setIsCustomerSuggestionsOpen(false);
+                                    }, 250);
+                                }} placeholder="ابحث بالاسم..." className={inputClass} disabled={isViewing} autoComplete="off" />
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                             </div>
                             {isCustomerSuggestionsOpen && suggestedCustomers.length > 0 && (

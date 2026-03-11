@@ -271,8 +271,15 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                         </div>
                         <div className="flex-[30%] min-w-[200px] relative z-[40]" ref={supplierDropdownRef}>
                             <label className={labelClass}>المورد</label>
-                             <div className="relative">
-                                <input type="text" value={supplierSearchQuery} onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} placeholder="ابحث بالاسم..." className={inputClass} disabled={isViewing} autoComplete="off" />
+                            <div className="relative">
+                                <input type="text" value={supplierSearchQuery} onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && supplierSearchQuery) {
+                                            handleSupplierSelect(suggestedSuppliers[0]);
+                                        }
+                                        setIsSupplierSuggestionsOpen(false);
+                                    }, 250);
+                                }} placeholder="ابحث بالاسم..." className={inputClass} disabled={isViewing} autoComplete="off" />
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                             </div>
                             {isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && (

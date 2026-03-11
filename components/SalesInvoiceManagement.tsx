@@ -735,7 +735,14 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                 <label className={labelClass}>العميل</label>
                                 <div className="flex items-center space-x-2 space-x-reverse">
                                     <div className="relative flex-grow">
-                                        <input type="text" value={customerSearchQuery} onChange={(e) => { setCustomerSearchQuery(e.target.value); openDropdown('customer'); }} onFocus={() => openDropdown('customer')} onBlur={() => setTimeout(() => setIsCustomerSuggestionsOpen(false), 250)} className={inputClass} disabled={isEditing && !canEdit} placeholder="بحث بالاسم أو الهاتف..." autoComplete="off" />
+                                        <input type="text" value={customerSearchQuery} onChange={(e) => { setCustomerSearchQuery(e.target.value); openDropdown('customer'); }} onFocus={() => openDropdown('customer')} onBlur={() => {
+                                            setTimeout(() => {
+                                                if (isCustomerSuggestionsOpen && suggestedCustomers.length > 0 && customerSearchQuery) {
+                                                    handleCustomerSelect(suggestedCustomers[0]);
+                                                }
+                                                setIsCustomerSuggestionsOpen(false);
+                                            }, 250);
+                                        }} className={inputClass} disabled={isEditing && !canEdit} placeholder="بحث بالاسم أو الهاتف..." autoComplete="off" />
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                     </div>
                                     {isCustomerSuggestionsOpen && (
@@ -765,7 +772,15 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                              <div className="lg:col-span-2 relative z-[90]">
                                 <label className={labelClass}>المندوب</label>
                                 <div className="relative">
-                                    <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); openDropdown('salesRep'); }} onFocus={() => openDropdown('salesRep')} onBlur={() => setTimeout(() => setIsSalesRepSuggestionsOpen(false), 250)} className={inputClass} disabled={isEditing && !canEdit} autoComplete="off"/>
+                                    <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); openDropdown('salesRep'); }} onFocus={() => openDropdown('salesRep')} onBlur={() => {
+                                        setTimeout(() => {
+                                            if (isSalesRepSuggestionsOpen && suggestedSalesReps.length > 0 && salesRepSearchQuery) {
+                                                setNewInvoice(p=>({...p, salesRepId: suggestedSalesReps[0].id})); 
+                                                setSalesRepSearchQuery(suggestedSalesReps[0].name);
+                                            }
+                                            setIsSalesRepSuggestionsOpen(false);
+                                        }, 250);
+                                    }} className={inputClass} disabled={isEditing && !canEdit} autoComplete="off"/>
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
                                 {isSalesRepSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-green-300 rounded mt-1 max-h-40 overflow-y-auto shadow-2xl">{suggestedSalesReps.slice(0, 50).map(r => <li key={r.id} onMouseDown={() => { setNewInvoice(p=>({...p, salesRepId: r.id})); setSalesRepSearchQuery(r.name); setIsSalesRepSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{r.name}</li>)}</ul>}
@@ -790,7 +805,14 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                 <div className="md:col-span-5 relative z-[45]">
                                     <label className={labelClass}>الصنف</label>
                                     <div className="relative">
-                                        <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); openDropdown('item'); }} onFocus={() => openDropdown('item')} onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 250)} placeholder="بحث بالاسم أو الباركود..." className={inputClass} autoComplete="off" />
+                                        <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); openDropdown('item'); }} onFocus={() => openDropdown('item')} onBlur={() => {
+                                            setTimeout(() => {
+                                                if (isItemSuggestionsOpen && suggestedItems.length > 0 && itemSearchQuery) {
+                                                    handleItemSelect(suggestedItems[0]);
+                                                }
+                                                setIsItemSuggestionsOpen(false);
+                                            }, 250);
+                                        }} placeholder="بحث بالاسم أو الباركود..." className={inputClass} autoComplete="off" />
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                     </div>
                                     {isItemSuggestionsOpen && suggestedItems.length > 0 && (

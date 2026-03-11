@@ -289,7 +289,15 @@ const SalesReport: React.FC<SalesReportProps> = ({
                     <div className="relative">
                         <label className={labelClass}>العميل</label>
                         <div className="relative">
-                            <input type="text" value={customerSearchQuery} onChange={(e) => { setCustomerSearchQuery(e.target.value); setIsCustomerSuggestionsOpen(true); }} onFocus={() => setIsCustomerSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsCustomerSuggestionsOpen(false), 250)} placeholder="كل العملاء" className={inputClass} autoComplete="off" />
+                            <input type="text" value={customerSearchQuery} onChange={(e) => { setCustomerSearchQuery(e.target.value); setIsCustomerSuggestionsOpen(true); }} onFocus={() => setIsCustomerSuggestionsOpen(true)} onBlur={() => {
+                                setTimeout(() => {
+                                    const filtered = customers.filter(c => searchMatch(c.name, customerSearchQuery));
+                                    if (isCustomerSuggestionsOpen && filtered.length > 0 && customerSearchQuery) {
+                                        handleCustomerSelect(filtered[0]);
+                                    }
+                                    setIsCustomerSuggestionsOpen(false);
+                                }, 250);
+                            }} placeholder="كل العملاء" className={inputClass} autoComplete="off" />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                         </div>
                         {isCustomerSuggestionsOpen && (
@@ -303,7 +311,15 @@ const SalesReport: React.FC<SalesReportProps> = ({
                     <div className="relative">
                         <label className={labelClass}>المندوب</label>
                         <div className="relative">
-                            <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); setIsSalesRepSuggestionsOpen(true); }} onFocus={() => setIsSalesRepSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsSalesRepSuggestionsOpen(false), 250)} placeholder="كل المناديب" className={inputClass} autoComplete="off" />
+                            <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); setIsSalesRepSuggestionsOpen(true); }} onFocus={() => setIsSalesRepSuggestionsOpen(true)} onBlur={() => {
+                                setTimeout(() => {
+                                    const filtered = salesRepresentatives.filter(r => searchMatch(r.name, salesRepSearchQuery));
+                                    if (isSalesRepSuggestionsOpen && filtered.length > 0 && salesRepSearchQuery) {
+                                        handleSalesRepSelect(filtered[0]);
+                                    }
+                                    setIsSalesRepSuggestionsOpen(false);
+                                }, 250);
+                            }} placeholder="كل المناديب" className={inputClass} autoComplete="off" />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                         </div>
                         {isSalesRepSuggestionsOpen && (
@@ -317,7 +333,15 @@ const SalesReport: React.FC<SalesReportProps> = ({
                     <div className="relative">
                         <label className={labelClass}>الصنف</label>
                         <div className="relative">
-                            <input type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); setIsItemSuggestionsOpen(true); }} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 250)} placeholder="كل الأصناف" className={inputClass} autoComplete="off" />
+                            <input type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); setIsItemSuggestionsOpen(true); }} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => {
+                                setTimeout(() => {
+                                    const filtered = uniqueItems.filter(i => searchMatch(i.name, itemSearchQuery));
+                                    if (isItemSuggestionsOpen && filtered.length > 0 && itemSearchQuery) {
+                                        handleItemSelect(filtered[0]);
+                                    }
+                                    setIsItemSuggestionsOpen(false);
+                                }, 250);
+                            }} placeholder="كل الأصناف" className={inputClass} autoComplete="off" />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                         </div>
                         {isItemSuggestionsOpen && (

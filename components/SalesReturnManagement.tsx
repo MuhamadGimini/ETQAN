@@ -607,7 +607,14 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                                 <label className={labelClass}>العميل</label>
                                 <div className="flex items-center space-x-2 space-x-reverse">
                                     <div className="relative flex-grow">
-                                        <input type="text" value={customerSearchQuery} onChange={(e) => { setCustomerSearchQuery(e.target.value); openDropdown('customer'); }} onFocus={() => openDropdown('customer')} onBlur={() => setTimeout(() => setIsCustomerSuggestionsOpen(false), 250)} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} placeholder="بحث..." autoComplete="off" />
+                                        <input type="text" value={customerSearchQuery} onChange={(e) => { setCustomerSearchQuery(e.target.value); openDropdown('customer'); }} onFocus={() => openDropdown('customer')} onBlur={() => {
+                                            setTimeout(() => {
+                                                if (isCustomerSuggestionsOpen && suggestedCustomers.length > 0 && customerSearchQuery) {
+                                                    handleCustomerSelect(suggestedCustomers[0]);
+                                                }
+                                                setIsCustomerSuggestionsOpen(false);
+                                            }, 250);
+                                        }} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} placeholder="بحث..." autoComplete="off" />
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                     </div>
                                     {isCustomerSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedCustomers.slice(0, 50).map(c => <li key={c.id} onMouseDown={() => { handleCustomerSelect(c); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b last:border-0 dark:text-white">{c.name}</li>)}</ul>}
@@ -624,7 +631,14 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                              <div className="lg:col-span-2 relative z-[90]">
                                 <label className={labelClass}>المندوب</label>
                                 <div className="relative">
-                                    <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); openDropdown('salesRep'); }} onFocus={() => openDropdown('salesRep')} onBlur={() => setTimeout(() => setIsSalesRepSuggestionsOpen(false), 250)} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} autoComplete="off"/>
+                                    <input type="text" value={salesRepSearchQuery} onChange={(e) => { setSalesRepSearchQuery(e.target.value); openDropdown('salesRep'); }} onFocus={() => openDropdown('salesRep')} onBlur={() => {
+                                        setTimeout(() => {
+                                            if (isSalesRepSuggestionsOpen && suggestedSalesReps.length > 0 && salesRepSearchQuery) {
+                                                handleSalesRepSelect(suggestedSalesReps[0]);
+                                            }
+                                            setIsSalesRepSuggestionsOpen(false);
+                                        }, 250);
+                                    }} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} autoComplete="off"/>
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
                                 {isSalesRepSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto shadow-2xl">{suggestedSalesReps.slice(0, 50).map(r => <li key={r.id} onMouseDown={() => { handleSalesRepSelect(r); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b last:border-0 dark:text-white">{r.name}</li>)}</ul>}
@@ -632,7 +646,14 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                              <div className="lg:col-span-2 relative z-[80]">
                                 <label className={labelClass}>المخزن</label>
                                 <div className="relative">
-                                    <input type="text" value={warehouseSearchQuery} onChange={(e) => { setWarehouseSearchQuery(e.target.value); openDropdown('warehouse'); }} onFocus={() => openDropdown('warehouse')} onBlur={() => setTimeout(() => setIsWarehouseSuggestionsOpen(false), 250)} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} autoComplete="off" />
+                                    <input type="text" value={warehouseSearchQuery} onChange={(e) => { setWarehouseSearchQuery(e.target.value); openDropdown('warehouse'); }} onFocus={() => openDropdown('warehouse')} onBlur={() => {
+                                        setTimeout(() => {
+                                            if (isWarehouseSuggestionsOpen && suggestedWarehouses.length > 0 && warehouseSearchQuery) {
+                                                handleWarehouseSelect(suggestedWarehouses[0]);
+                                            }
+                                            setIsWarehouseSuggestionsOpen(false);
+                                        }, 250);
+                                    }} className={inputClass} disabled={isViewing || (isEditing && !canEdit)} autoComplete="off" />
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
                                 {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-red-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.slice(0, 50).map(w => <li key={w.id} onMouseDown={() => { handleWarehouseSelect(w); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
@@ -646,7 +667,14 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                                 <div className="md:col-span-5 relative z-[45]">
                                     <label className={labelClass}>الصنف</label>
                                     <div className="relative">
-                                        <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); openDropdown('item'); }} onFocus={() => openDropdown('item')} onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 250)} placeholder="بحث بالاسم أو الباركود..." disabled={!newReturn.warehouseId} className={inputClass} autoComplete="off" />
+                                        <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); openDropdown('item'); }} onFocus={() => openDropdown('item')} onBlur={() => {
+                                            setTimeout(() => {
+                                                if (isItemSuggestionsOpen && suggestedItems.length > 0 && itemSearchQuery) {
+                                                    handleItemSelect(suggestedItems[0]);
+                                                }
+                                                setIsItemSuggestionsOpen(false);
+                                            }, 250);
+                                        }} placeholder="بحث بالاسم أو الباركود..." disabled={!newReturn.warehouseId} className={inputClass} autoComplete="off" />
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                     </div>
                                     {isItemSuggestionsOpen && suggestedItems.length > 0 && (

@@ -226,7 +226,14 @@ const DiscountManagement: React.FC<DiscountManagementProps> = ({
                         value={searchQuery}
                         onChange={handleSearchChange}
                         onFocus={() => setIsSuggestionsOpen(true)}
-                        onBlur={() => setTimeout(() => setIsSuggestionsOpen(false), 200)}
+                        onBlur={() => {
+                            setTimeout(() => {
+                                if (isSuggestionsOpen && suggestedItems.length > 0 && searchQuery) {
+                                    handleAddItem(suggestedItems[0]);
+                                }
+                                setIsSuggestionsOpen(false);
+                            }, 250);
+                        }}
                         placeholder="ابحث بالاسم أو الباركود..."
                         className={inputClass}
                         autoComplete="off"

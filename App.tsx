@@ -69,6 +69,7 @@ import { initLicense, LicenseStatus } from './services/license';
 import { checkGitHubUpdate } from './services/githubUpdate';
 import { APP_VERSION } from './constants/version';
 import { DownloadIcon, Modal, ActionFeedback, CloudIcon, DatabaseIcon, WarningIcon } from './components/Shared';
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import type { 
     MgmtUser, CompanyData, Warehouse, Unit, Item, Treasury, ExpenseCategory, Expense, Customer, CustomerReceipt,
     SalesRepresentative, Supplier, SupplierPayment, SalesInvoice, SalesReturn, 
@@ -273,6 +274,8 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useKeyboardNavigation();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

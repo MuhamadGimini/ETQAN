@@ -183,6 +183,18 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
         setIsItemSuggestionsOpen(false);
     };
 
+    const handleSupplierSelect = (supplier: Supplier) => {
+        setNewInvoice((prev: any) => ({ ...prev, supplierId: supplier.id }));
+        setSupplierSearchQuery(supplier.name);
+        setIsSupplierSuggestionsOpen(false);
+    };
+
+    const handleWarehouseSelect = (warehouse: Warehouse) => {
+        setNewInvoice((prev: any) => ({ ...prev, warehouseId: warehouse.id }));
+        setWarehouseSearchQuery(warehouse.name);
+        setIsWarehouseSuggestionsOpen(false);
+    };
+
     const handleItemQuickAdded = (newItem: Item) => {
         setItems(prev => [...prev, newItem]);
         const newPurchaseItem: PurchaseInvoiceItem = { itemId: newItem.id, quantity: 1, price: newItem.purchasePrice };
@@ -594,13 +606,20 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                 <label className={labelClass}>المورد</label>
                                 <div className="flex items-center space-x-2 space-x-reverse">
                                     <div className="relative flex-grow">
-                                        <input type="text" value={supplierSearchQuery} onChange={(e) => { setSupplierSearchQuery(e.target.value); openDropdown('supplier'); }} onFocus={() => openDropdown('supplier')} onBlur={() => setTimeout(() => setIsSupplierSuggestionsOpen(false), 250)} className={inputClass} placeholder="بحث بالاسم أو الهاتف..." autoComplete="off" />
+                                        <input type="text" value={supplierSearchQuery} onChange={(e) => { setSupplierSearchQuery(e.target.value); openDropdown('supplier'); }} onFocus={() => openDropdown('supplier')} onBlur={() => {
+                                            setTimeout(() => {
+                                                if (isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && supplierSearchQuery) {
+                                                    handleSupplierSelect(suggestedSuppliers[0]);
+                                                }
+                                                setIsSupplierSuggestionsOpen(false);
+                                            }, 250);
+                                        }} className={inputClass} placeholder="بحث بالاسم أو الهاتف..." autoComplete="off" />
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                     </div>
                                     {isSupplierSuggestionsOpen && (
                                         <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">
                                             {suggestedSuppliers.length > 0 ? suggestedSuppliers.slice(0, 50).map(s => (
-                                                <li key={s.id} onMouseDown={() => { setNewInvoice(p=>({...p, supplierId: s.id})); setSupplierSearchQuery(s.name); setIsSupplierSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold border-b last:border-0 dark:text-white">
+                                                <li key={s.id} onMouseDown={() => handleSupplierSelect(s)} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold border-b last:border-0 dark:text-white">
                                                     {s.name}
                                                 </li>
                                             )) : (
@@ -618,10 +637,17 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                              <div className="lg:col-span-2 relative z-[80]">
                                 <label className={labelClass}>المخزن</label>
                                 <div className="relative">
-                                    <input type="text" value={warehouseSearchQuery} onChange={(e) => { setWarehouseSearchQuery(e.target.value); openDropdown('warehouse'); }} onFocus={() => openDropdown('warehouse')} onBlur={() => setTimeout(() => setIsWarehouseSuggestionsOpen(false), 250)} className={inputClass} autoComplete="off" />
+                                    <input type="text" value={warehouseSearchQuery} onChange={(e) => { setWarehouseSearchQuery(e.target.value); openDropdown('warehouse'); }} onFocus={() => openDropdown('warehouse')} onBlur={() => {
+                                        setTimeout(() => {
+                                            if (isWarehouseSuggestionsOpen && suggestedWarehouses.length > 0 && warehouseSearchQuery) {
+                                                handleWarehouseSelect(suggestedWarehouses[0]);
+                                            }
+                                            setIsWarehouseSuggestionsOpen(false);
+                                        }, 250);
+                                    }} className={inputClass} autoComplete="off" />
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
-                                {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.slice(0, 50).map(w => <li key={w.id} onMouseDown={() => { setNewInvoice(p=>({...p, warehouseId: w.id})); setWarehouseSearchQuery(w.name); setIsWarehouseSuggestionsOpen(false); }} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
+                                {isWarehouseSuggestionsOpen && <ul className="absolute z-[1000] w-full bg-white dark:bg-gray-800 border-2 border-emerald-300 rounded mt-1 max-h-40 overflow-y-auto top-full shadow-2xl">{suggestedWarehouses.slice(0, 50).map(w => <li key={w.id} onMouseDown={() => handleWarehouseSelect(w)} className="p-3 hover:bg-gray-100 font-bold border-b last:border-0 dark:text-white">{w.name}</li>)}</ul>}
                              </div>
                              <div className="lg:col-span-2 relative">
                                 <label className={labelClass}>النوع</label>
@@ -643,7 +669,14 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                             <div className="md:col-span-5 relative z-[45]">
                                 <label className={labelClass}>الصنف</label>
                                 <div className="relative">
-                                    <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); openDropdown('item'); }} onFocus={() => openDropdown('item')} onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 250)} placeholder="بحث..." className={inputClass} autoComplete="off" />
+                                    <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); openDropdown('item'); }} onFocus={() => openDropdown('item')} onBlur={() => {
+                                        setTimeout(() => {
+                                            if (isItemSuggestionsOpen && suggestedItems.length > 0 && itemSearchQuery) {
+                                                handleItemSelect(suggestedItems[0]);
+                                            }
+                                            setIsItemSuggestionsOpen(false);
+                                        }, 250);
+                                    }} placeholder="بحث..." className={inputClass} autoComplete="off" />
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                 </div>
                                 {isItemSuggestionsOpen && suggestedItems.length > 0 && (

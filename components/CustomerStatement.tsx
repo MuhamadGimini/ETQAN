@@ -383,7 +383,14 @@ ${defaultValues.whatsappFooter}`;
                                 value={customerSearchQuery}
                                 onChange={handleCustomerSearchChange}
                                 onFocus={() => setIsCustomerSuggestionsOpen(true)}
-                                onBlur={() => setTimeout(() => setIsCustomerSuggestionsOpen(false), 200)}
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isCustomerSuggestionsOpen && suggestedCustomers.length > 0 && customerSearchQuery) {
+                                            handleCustomerSelect(suggestedCustomers[0]);
+                                        }
+                                        setIsCustomerSuggestionsOpen(false);
+                                    }, 200);
+                                }}
                                 placeholder="-- ابحث أو اختر عميل --"
                                 autoComplete="off"
                             />

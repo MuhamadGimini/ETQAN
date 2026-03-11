@@ -273,7 +273,15 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
                                     <div className="md:col-span-7 relative">
                                         <label className={labelClass}>بحث عن صنف في المصدر</label>
                                         <div className="relative">
-                                            <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); setIsItemSuggestionsOpen(true); }} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 200)} placeholder={newTransfer.fromWarehouseId ? "الاسم أو الباركود..." : "اختر مخزن المصدر أولاً"} disabled={!newTransfer.fromWarehouseId} className={inputClass} autoComplete="off" />
+                                            <input ref={itemSearchInputRef} type="text" value={itemSearchQuery} onChange={(e) => { setItemSearchQuery(e.target.value); setIsItemSuggestionsOpen(true); }} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => {
+                                                setTimeout(() => {
+                                                    if (isItemSuggestionsOpen && suggestedItems.length > 0 && itemSearchQuery) {
+                                                        setCurrentItemSelection({ itemId: suggestedItems[0].id, quantity: 1 }); 
+                                                        setItemSearchQuery(suggestedItems[0].name);
+                                                    }
+                                                    setIsItemSuggestionsOpen(false);
+                                                }, 250);
+                                            }} placeholder={newTransfer.fromWarehouseId ? "الاسم أو الباركود..." : "اختر مخزن المصدر أولاً"} disabled={!newTransfer.fromWarehouseId} className={inputClass} autoComplete="off" />
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                                         </div>
                                         {isItemSuggestionsOpen && suggestedItems.length > 0 && (

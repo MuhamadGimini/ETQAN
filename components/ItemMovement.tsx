@@ -265,7 +265,14 @@ const ItemMovement: React.FC<ItemMovementProps> = ({
                                 value={itemSearchQuery}
                                 onChange={(e) => { setItemSearchQuery(e.target.value); setIsItemSuggestionsOpen(true); }}
                                 onFocus={() => setIsItemSuggestionsOpen(true)}
-                                onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 200)}
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isItemSuggestionsOpen && suggestedItems && suggestedItems.length > 0 && itemSearchQuery) {
+                                            handleItemSelect(suggestedItems[0]);
+                                        }
+                                        setIsItemSuggestionsOpen(false);
+                                    }, 250);
+                                }}
                                 placeholder="اسم الصنف أو الباركود..."
                                 autoComplete="off"
                             />

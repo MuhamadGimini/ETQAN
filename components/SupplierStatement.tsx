@@ -305,7 +305,14 @@ const SupplierStatement: React.FC<SupplierStatementProps> = ({
                                 value={supplierSearchQuery}
                                 onChange={handleSupplierSearchChange}
                                 onFocus={() => setIsSupplierSuggestionsOpen(true)}
-                                onBlur={() => setTimeout(() => setIsSupplierSuggestionsOpen(false), 200)}
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && supplierSearchQuery) {
+                                            handleSupplierSelect(suggestedSuppliers[0]);
+                                        }
+                                        setIsSupplierSuggestionsOpen(false);
+                                    }, 200);
+                                }}
                                 placeholder="-- ابحث أو اختر مورد --"
                                 autoComplete="off"
                             />

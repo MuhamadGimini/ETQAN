@@ -599,7 +599,14 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
               <div className="relative">
                 <label className={labelClass}>المورد (اختياري)</label>
                 <div className="relative">
-                    <input type="text" value={supplierSearchQuery} onChange={(e) => {setSupplierSearchQuery(e.target.value); setIsSupplierSuggestionsOpen(true);}} onFocus={() => setIsSupplierSuggestionsOpen(true)} onBlur={() => setTimeout(()=>setIsSupplierSuggestionsOpen(false), 200)} placeholder="ابحث..." className={inputClass} disabled={viewOnly} autoComplete="off" />
+                    <input type="text" value={supplierSearchQuery} onChange={(e) => {setSupplierSearchQuery(e.target.value); setIsSupplierSuggestionsOpen(true);}} onFocus={() => setIsSupplierSuggestionsOpen(true)} onBlur={() => {
+                        setTimeout(() => {
+                            if (isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && supplierSearchQuery) {
+                                handleSupplierSelect(suggestedSuppliers[0]);
+                            }
+                            setIsSupplierSuggestionsOpen(false);
+                        }, 250);
+                    }} placeholder="ابحث..." className={inputClass} disabled={viewOnly} autoComplete="off" />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                 </div>
                 {isSupplierSuggestionsOpen && (
@@ -667,7 +674,14 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-6 items-end bg-black/5 p-4 rounded-xl relative z-30">
                 <div className="md:col-span-5 relative">
                     <label className={labelClass}>اسم الصنف</label>
-                    <input ref={itemNameRef} type="text" value={newItem.name} onChange={e => { setNewItem({...newItem, name: e.target.value}); setIsItemSuggestionsOpen(true); }} onFocus={()=>setIsItemSuggestionsOpen(true)} onBlur={()=>setTimeout(()=>setIsItemSuggestionsOpen(false), 200)} placeholder="اكتب اسم الصنف..." className={inputClass} autoComplete="off" />
+                    <input ref={itemNameRef} type="text" value={newItem.name} onChange={e => { setNewItem({...newItem, name: e.target.value}); setIsItemSuggestionsOpen(true); }} onFocus={()=>setIsItemSuggestionsOpen(true)} onBlur={() => {
+                        setTimeout(() => {
+                            if (isItemSuggestionsOpen && suggestedItems.length > 0 && newItem.name) {
+                                setNewItem({ ...newItem, name: suggestedItems[0].name });
+                            }
+                            setIsItemSuggestionsOpen(false);
+                        }, 250);
+                    }} placeholder="اكتب اسم الصنف..." className={inputClass} autoComplete="off" />
                     {isItemSuggestionsOpen && suggestedItems.length > 0 && (
                         <ul className="absolute z-50 w-full bg-white dark:bg-gray-800 border-2 border-indigo-300 rounded-lg mt-1 max-h-40 overflow-y-auto shadow-2xl top-full">
                             {suggestedItems.map(item => <li key={item.id} onMouseDown={() => setNewItem({ ...newItem, name: item.name, barcode: item.barcode })} className="p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer font-bold border-b last:border-0 dark:text-white text-sm">{item.name}</li>)}

@@ -454,7 +454,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({
             <div className={`${cardClass} relative`}>
                 <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-2 text-lg">بحث سريع عن صنف</h3>
                 <div className="relative">
-                    <input type="text" placeholder="الاسم أو الباركود" value={itemQuery} onChange={handleItemSearchChange} onFocus={() => setIsItemSuggestionsOpen(true)} className={inputClass} />
+                    <input type="text" placeholder="الاسم أو الباركود" value={itemQuery} onChange={handleItemSearchChange} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => {
+                        setTimeout(() => {
+                            const suggestions = getSuggestedItems();
+                            if (isItemSuggestionsOpen && suggestions.length > 0 && itemQuery) {
+                                setFoundItem(suggestions[0]);
+                                setItemQuery(suggestions[0].name);
+                            }
+                            setIsItemSuggestionsOpen(false);
+                        }, 250);
+                    }} className={inputClass} />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon className="h-6 w-6" /></div>
                     {isItemSuggestionsOpen && itemQuery && (
                         <ul className="absolute z-[100] w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md max-h-60 overflow-y-auto shadow-lg top-full left-0">
@@ -504,7 +513,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({
             <div className={`${cardClass} relative`}>
                 <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-2 text-lg">استعلام رصيد عميل</h3>
                 <div className="relative">
-                    <input type="text" placeholder="اسم العميل أو الهاتف" value={customerQuery} onChange={handleCustomerSearchChange} onFocus={() => setIsCustomerSuggestionsOpen(true)} className={inputClass} />
+                    <input type="text" placeholder="اسم العميل أو الهاتف" value={customerQuery} onChange={handleCustomerSearchChange} onFocus={() => setIsCustomerSuggestionsOpen(true)} onBlur={() => {
+                        setTimeout(() => {
+                            const suggestions = getSuggestedCustomers();
+                            if (isCustomerSuggestionsOpen && suggestions.length > 0 && customerQuery) {
+                                setFoundCustomer(suggestions[0]);
+                                setCustomerQuery(suggestions[0].name);
+                            }
+                            setIsCustomerSuggestionsOpen(false);
+                        }, 250);
+                    }} className={inputClass} />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon className="h-6 w-6" /></div>
                     {isCustomerSuggestionsOpen && customerQuery && (
                         <ul className="absolute z-[100] w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md max-h-60 overflow-y-auto shadow-lg top-full left-0">
@@ -532,7 +550,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({
             <div className={`${cardClass} relative`}>
                 <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-2 text-lg">استعلام رصيد مورد</h3>
                 <div className="relative">
-                    <input type="text" placeholder="اسم المورد أو الهاتف" value={supplierQuery} onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} className={inputClass} />
+                    <input type="text" placeholder="اسم المورد أو الهاتف" value={supplierQuery} onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} onBlur={() => {
+                        setTimeout(() => {
+                            const suggestions = getSuggestedSuppliers();
+                            if (isSupplierSuggestionsOpen && suggestions.length > 0 && supplierQuery) {
+                                setFoundSupplier(suggestions[0]);
+                                setSupplierQuery(suggestions[0].name);
+                            }
+                            setIsSupplierSuggestionsOpen(false);
+                        }, 250);
+                    }} className={inputClass} />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon className="h-6 w-6" /></div>
                     {isSupplierSuggestionsOpen && supplierQuery && (
                         <ul className="absolute z-[100] w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md max-h-60 overflow-y-auto shadow-lg top-full left-0">

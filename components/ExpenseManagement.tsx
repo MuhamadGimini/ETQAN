@@ -291,7 +291,14 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                         <div className="flex-[14%] min-w-[150px] relative z-[40]" ref={categoryDropdownRef}>
                             <label className={labelClass}>نوع المصروف</label>
                             <div className="relative">
-                                <input type="text" value={categorySearchQuery} onChange={(e) => {setCategorySearchQuery(e.target.value); setIsCategorySuggestionsOpen(true);}} onFocus={() => setIsCategorySuggestionsOpen(true)} placeholder="ابحث..." className={inputClass} required disabled={isViewing} autoComplete="off"/>
+                                <input type="text" value={categorySearchQuery} onChange={(e) => {setCategorySearchQuery(e.target.value); setIsCategorySuggestionsOpen(true);}} onFocus={() => setIsCategorySuggestionsOpen(true)} onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isCategorySuggestionsOpen && suggestedCategories.length > 0 && categorySearchQuery) {
+                                            handleCategorySelect(suggestedCategories[0]);
+                                        }
+                                        setIsCategorySuggestionsOpen(false);
+                                    }, 250);
+                                }} placeholder="ابحث..." className={inputClass} required disabled={isViewing} autoComplete="off"/>
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                             </div>
                             {isCategorySuggestionsOpen && suggestedCategories.length > 0 && (
@@ -311,7 +318,14 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                         <div className="flex-[14%] min-w-[150px] relative z-[35]" ref={treasuryDropdownRef}>
                             <label className={labelClass}>الخزينة</label>
                             <div className="relative">
-                                <input ref={treasuryInputRef} type="text" value={treasurySearchQuery} onChange={(e) => {setTreasurySearchQuery(e.target.value); setIsTreasurySuggestionsOpen(true);}} onFocus={() => setIsTreasurySuggestionsOpen(true)} placeholder="اختر..." className={inputClass} required disabled={isViewing} autoComplete="off"/>
+                                <input ref={treasuryInputRef} type="text" value={treasurySearchQuery} onChange={(e) => {setTreasurySearchQuery(e.target.value); setIsTreasurySuggestionsOpen(true);}} onFocus={() => setIsTreasurySuggestionsOpen(true)} onBlur={() => {
+                                    setTimeout(() => {
+                                        if (isTreasurySuggestionsOpen && suggestedTreasuries.length > 0 && treasurySearchQuery) {
+                                            handleTreasurySelect(suggestedTreasuries[0]);
+                                        }
+                                        setIsTreasurySuggestionsOpen(false);
+                                    }, 250);
+                                }} placeholder="اختر..." className={inputClass} required disabled={isViewing} autoComplete="off"/>
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                             </div>
                              {isTreasurySuggestionsOpen && (

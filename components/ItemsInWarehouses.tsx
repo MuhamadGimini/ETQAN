@@ -433,7 +433,14 @@ const ItemsInWarehouses: React.FC<ItemsInWarehousesProps> = ({
                     <div className="lg:col-span-1 relative">
                         <label className={labelClass}>بحث عن صنف</label>
                         <div className="relative">
-                            <input type="text" placeholder="الاسم أو الباركود..." value={itemSearchQuery} onChange={handleItemSearchChange} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsItemSuggestionsOpen(false), 200)} className={inputClass} autoComplete="off" />
+                            <input type="text" placeholder="الاسم أو الباركود..." value={itemSearchQuery} onChange={handleItemSearchChange} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={() => {
+                                setTimeout(() => {
+                                    if (isItemSuggestionsOpen && suggestedItems.length > 0 && itemSearchQuery) {
+                                        handleItemSelect(suggestedItems[0]);
+                                    }
+                                    setIsItemSuggestionsOpen(false);
+                                }, 250);
+                            }} className={inputClass} autoComplete="off" />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                         </div>
                         {isItemSuggestionsOpen && (

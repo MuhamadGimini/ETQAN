@@ -235,7 +235,14 @@ const SalesRepStatement: React.FC<SalesRepStatementProps> = ({
                     <div className="relative">
                         <label className={labelClass} htmlFor="rep-select">اختر البائع</label>
                         <div className="relative">
-                            <input type="text" value={salesRepSearchQuery} onChange={handleSalesRepSearchChange} onFocus={() => setIsSalesRepSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsSalesRepSuggestionsOpen(false), 200)} placeholder="-- اختر بائع --" className={inputClass} autoComplete="off" />
+                            <input type="text" value={salesRepSearchQuery} onChange={handleSalesRepSearchChange} onFocus={() => setIsSalesRepSuggestionsOpen(true)} onBlur={() => {
+                                setTimeout(() => {
+                                    if (isSalesRepSuggestionsOpen && suggestedSalesReps.length > 0 && salesRepSearchQuery) {
+                                        handleSalesRepSelect(suggestedSalesReps[0]);
+                                    }
+                                    setIsSalesRepSuggestionsOpen(false);
+                                }, 200);
+                            }} placeholder="-- اختر بائع --" className={inputClass} autoComplete="off" />
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><ChevronDownIcon /></div>
                         </div>
                         {isSalesRepSuggestionsOpen && (

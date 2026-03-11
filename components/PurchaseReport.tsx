@@ -151,13 +151,11 @@ const PurchaseReport: React.FC<PurchaseReportProps> = ({
 
     const handleItemBlur = () => {
         setTimeout(() => {
-            if (isItemSuggestionsOpen) {
-                if (suggestedItems.length === 1) {
-                    handleItemSelect(suggestedItems[0]);
-                }
-                setIsItemSuggestionsOpen(false);
+            if (isItemSuggestionsOpen && suggestedItems.length > 0 && itemSearchQuery) {
+                handleItemSelect(suggestedItems[0]);
             }
-        }, 200);
+            setIsItemSuggestionsOpen(false);
+        }, 250);
     };
 
     const handleSearch = (searchType: 'summary' | 'detailed') => {
@@ -339,7 +337,7 @@ const PurchaseReport: React.FC<PurchaseReportProps> = ({
                     <div><label className={labelClass}>رقم الفاتورة</label><input type="text" name="docId" value={filters.docId} onChange={handleFilterChange} className={inputClass} placeholder="بحث بالرقم..." /></div>
                     <div><label className={labelClass}>النوع</label><select name="type" value={filters.type} onChange={handleFilterChange} className={inputClass}><option value="all">الكل</option><option value="purchases">مشتريات</option><option value="returns">مرتجع</option></select></div>
                     <div><label className={labelClass}>المخزن</label><select name="warehouseId" value={filters.warehouseId} onChange={handleFilterChange} className={inputClass}><option value="all">الكل</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></div>
-                    <div className="relative"><label className={labelClass}>المورد</label><input type="text" value={supplierSearchQuery} placeholder="الكل" onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} onBlur={() => setTimeout(() => setIsSupplierSuggestionsOpen(false), 200)} className={inputClass} autoComplete="off" />{isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && (<ul className="absolute z-50 w-full bg-white dark:bg-gray-800 border rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">{suggestedSuppliers.map(s => <li key={s.id} onMouseDown={() => handleSupplierSelect(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">{s.name}</li>)}</ul>)}</div>
+                    <div className="relative"><label className={labelClass}>المورد</label><input type="text" value={supplierSearchQuery} placeholder="الكل" onChange={handleSupplierSearchChange} onFocus={() => setIsSupplierSuggestionsOpen(true)} onBlur={() => { setTimeout(() => { if (isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && supplierSearchQuery) { handleSupplierSelect(suggestedSuppliers[0]); } setIsSupplierSuggestionsOpen(false); }, 250); }} className={inputClass} autoComplete="off" />{isSupplierSuggestionsOpen && suggestedSuppliers.length > 0 && (<ul className="absolute z-50 w-full bg-white dark:bg-gray-800 border rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">{suggestedSuppliers.map(s => <li key={s.id} onMouseDown={() => handleSupplierSelect(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">{s.name}</li>)}</ul>)}</div>
                     <div className="relative"><label className={labelClass}>الصنف</label><input type="text" value={itemSearchQuery} placeholder="الكل" onChange={handleItemSearchChange} onKeyDown={handleItemKeyDown} onFocus={() => setIsItemSuggestionsOpen(true)} onBlur={handleItemBlur} className={inputClass} autoComplete="off" />{isItemSuggestionsOpen && suggestedItems.length > 0 && (<ul className="absolute z-50 w-full bg-white dark:bg-gray-800 border rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">{suggestedItems.map(i => <li key={i.barcode} onMouseDown={() => handleItemSelect(i)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">{i.name}</li>)}</ul>)}</div>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
