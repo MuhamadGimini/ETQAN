@@ -284,9 +284,9 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({
                         </div>
 
                         {partnerCount > 0 && (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-right border-collapse">
-                                    <thead>
+                            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right border-collapse">
+                                    <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                                         <tr className="bg-gray-100 dark:bg-gray-700">
                                             <th className="p-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">اسم الشريك</th>
                                             <th className="p-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 w-32 text-center">نسبة الربح (%)</th>

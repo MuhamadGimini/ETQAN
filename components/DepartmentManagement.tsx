@@ -153,9 +153,9 @@ const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ departments
       </div>
 
       <div className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right border-collapse">
+            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="p-4 font-bold text-gray-700 dark:text-gray-300 text-center w-32">كود الإدارة</th>
                 <th className="p-4 font-bold text-gray-700 dark:text-gray-300">قائمة الأقسام</th>

@@ -335,7 +335,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ customers, setC
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto relative max-h-[60vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div className="overflow-x-auto relative max-h-[60vh] border border-gray-200 dark:border-gray-700 rounded-lg overflow-y-auto">
                         <table className="w-full text-right border-collapse">
                             <thead className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-800">
                                 <tr className="text-gray-700 dark:text-gray-300 shadow-sm">

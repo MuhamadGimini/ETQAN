@@ -224,7 +224,7 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
                 id: finalItemId,
                 barcode: importItem.barcode || getNextBarcode(updatedItemsList),
                 name: importItem.name.trim(),
-                unitId: defaultValues.defaultUnitId,
+                unitId: defaultValues.defaultUnitId || (units && units.length > 0 ? units[0].id : 1),
                 warehouseId: warehouseId,
                 openingBalance: importItem.qty, 
                 initialBalance: 0,
@@ -431,7 +431,7 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
                 <div>نسبة المصاريف الإضافية: <span class="font-bold text-red-600">${(totals.overheadRatio * 100).toFixed(2)}%</span></div>
             </div>
             <table class="w-full text-right border-collapse border border-gray-400 mt-4">
-                <thead><tr class="bg-indigo-600 text-white text-[10pt] font-black">
+                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"><tr class="bg-indigo-600 text-white text-[10pt] font-black">
                     <th class="p-2 border border-indigo-800 text-center">م</th><th class="p-2 border border-indigo-800 text-center">الصنف</th><th class="p-2 border border-indigo-800 text-center">الكمية</th><th class="p-2 border border-indigo-800 text-center">السعر RMB</th><th class="p-2 border border-indigo-800 text-center">سعر FOB (ج.م)</th><th class="p-2 border border-indigo-800 text-center">نصيب الوحدة</th><th class="p-2 border border-indigo-800 text-center">تكلفة الوحدة نهائي</th><th class="p-2 border border-indigo-800 text-center">الإجمالي (ج.م)</th>
                 </tr></thead>
                 <tbody class="text-[9pt] font-bold text-black">${rowsHtml}</tbody>
@@ -702,9 +702,9 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
             </div>
           )}
 
-          <div className="overflow-x-auto border rounded-xl">
-              <table className="w-full text-right border-collapse">
-                  <thead className="bg-gray-100 dark:bg-gray-800 font-bold">
+          <div className="overflow-x-auto border rounded-xl max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right border-collapse">
+                  <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-gray-100 dark:bg-gray-800 font-bold">
                       <tr>
                           <th className="p-3 border text-xs font-bold">اسم الصنف</th>
                           <th className="p-3 border text-xs font-bold text-center">الكمية</th>

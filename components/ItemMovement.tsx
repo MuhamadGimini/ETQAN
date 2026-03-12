@@ -332,8 +332,8 @@ const ItemMovement: React.FC<ItemMovementProps> = ({
                     </div>
 
                     <div className={cardClass}>
-                        <div className="overflow-x-auto rounded-xl border-2 border-gray-100 dark:border-gray-700 shadow-inner">
-                            <table className="w-full text-right border-collapse">
+                        <div className="overflow-x-auto rounded-xl border-2 border-gray-100 dark:border-gray-700 shadow-inner max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right border-collapse">
                                 <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0 z-10">
                                     <tr>
                                         <th className="p-4 border-b text-xs font-black text-gray-500 text-center w-32">التاريخ</th>

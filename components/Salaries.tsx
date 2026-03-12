@@ -322,7 +322,7 @@ const Salaries: React.FC<SalariesProps> = ({ employees, attendanceRecords, salar
             <p className="text-lg">عن شهر: {selectedMonth}</p>
           </div>
           <table className="w-full text-right border-collapse table-fixed print:table-auto print:border print:border-gray-300">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 print:bg-gray-100">
+            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 print:bg-gray-100">
               <tr>
                 <th className="p-2 font-bold text-gray-700 dark:text-gray-300 text-center whitespace-nowrap w-1/12 text-xs print:border print:border-gray-300">كود الموظف</th>
                 <th className="p-2 font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap w-2/12 text-xs print:border print:border-gray-300">اسم الموظف</th>
@@ -607,7 +607,7 @@ const Salaries: React.FC<SalariesProps> = ({ employees, attendanceRecords, salar
                   <div className="mt-8">
                     <h2 className="text-xl font-bold mb-4 border-b border-gray-300 pb-2">سجل الحضور والانصراف</h2>
                     <table className="w-full text-right border-collapse border border-gray-300 text-sm">
-                      <thead className="bg-gray-100">
+                      <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-gray-100">
                         <tr>
                           <th className="p-2 border border-gray-300">التاريخ</th>
                           <th className="p-2 border border-gray-300">الحضور</th>

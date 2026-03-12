@@ -1,10 +1,9 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import type { Expense, ExpenseCategory, Treasury, NotificationType, MgmtUser, DefaultValues, CustomerReceipt, SupplierPayment, TreasuryTransfer, SalesInvoice, PurchaseInvoice, SalesReturn, PurchaseReturn, CompanyData } from '../types';
-import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon, PrintIcon } from './Shared';
+import type { Expense, ExpenseCategory, Treasury, NotificationType, MgmtUser, DefaultValues, CustomerReceipt, SupplierPayment, TreasuryTransfer, SalesInvoice, PurchaseInvoice, SalesReturn, PurchaseReturn } from '../types';
+import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
-import { searchMatch, formatDateForDisplay } from '../utils';
-import { getReportPrintTemplate } from '../utils/printing';
+import { searchMatch } from '../utils';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
 
@@ -27,13 +26,12 @@ interface ExpenseManagementProps {
     setDraft: React.Dispatch<React.SetStateAction<any>>;
     isEditing: boolean;
     setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
-    companyData: CompanyData;
 }
 
 const ExpenseManagement: React.FC<ExpenseManagementProps> = ({ 
     expenses, setExpenses, expenseCategories, treasuries, showNotification, currentUser, defaultValues,
     customerReceipts, supplierPayments, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns,
-    draft, setDraft, isEditing, setIsEditing, companyData
+    draft, setDraft, isEditing, setIsEditing
 }) => {
     
     const getNextExpenseId = () => {
@@ -192,49 +190,6 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         setDraft(null); 
         setCategorySearchQuery(''); 
         setTreasurySearchQuery(''); 
-    };
-
-    const handlePrint = (expense: Expense) => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-
-        const category = expenseCategories.find(c => c.id === expense.categoryId)?.name || '';
-        const treasury = treasuries.find(t => t.id === expense.treasuryId)?.name || '';
-
-        const headers = ['رقم السند', 'التاريخ', 'نوع المصروف', 'المستفيد', 'المبلغ', 'الخزينة'];
-        const rowsHtml = `
-            <tr>
-                <td>${expense.id}</td>
-                <td>${formatDateForDisplay(expense.date)}</td>
-                <td>${category}</td>
-                <td>${expense.beneficiary || '-'}</td>
-                <td class="font-black text-red">${expense.amount.toFixed(2)}</td>
-                <td>${treasury}</td>
-            </tr>
-        `;
-
-        const summaryHtml = `
-            <div class="summary-item"><span>المبلغ:</span><span class="text-red">${expense.amount.toFixed(2)}</span></div>
-            <div class="summary-item"><span>ملاحظات:</span><span>${expense.notes || '-'}</span></div>
-        `;
-
-        const signaturesHtml = `
-            <div class="signature-box">
-                <div class="signature-title">المستلم</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">أمين الخزينة</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">مدير الحسابات</div>
-                <div class="signature-line"></div>
-            </div>
-        `;
-
-        printWindow.document.write(getReportPrintTemplate('سند صرف مصروفات', `مستند رقم ${expense.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml, 'A5 landscape'));
-        printWindow.document.close();
     };
     
     const suggestedCategories = React.useMemo(() => {
@@ -456,9 +411,9 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                     </div>
                 </div>
 
-                <div className="overflow-x-auto max-h-[65vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <table className="w-full text-right border-collapse">
-                        <thead className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-sm">
+                <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right">
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                             <tr>
                                 <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">رقم المستند</th>
                                 <th className="p-3 border-b-2 border-gray-300 dark:border-gray-600">التاريخ</th>
@@ -485,7 +440,6 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                         <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{exp.createdBy || '-'}</td>
                                         <td className="p-3">
                                             <div className="flex justify-center gap-2">
-                                                <button onClick={() => handlePrint(exp)} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="طباعة"><PrintIcon /></button>
                                                 <button onClick={() => handleEdit(exp, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
                                                 <button onClick={() => handleEdit(exp, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
                                                 {canDelete && <button onClick={() => handleDelete(exp)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}

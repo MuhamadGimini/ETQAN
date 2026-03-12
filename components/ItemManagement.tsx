@@ -69,10 +69,16 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
     };
 
     const handleQuickEditChange = (itemId: number, field: keyof Item, value: string) => {
-        const numValue = parseFloat(value) || 0;
-        setItems(prev => prev.map(item => 
-            item.id === itemId ? { ...item, [field]: numValue } : item
-        ));
+        setItems(prev => prev.map(item => {
+            if (item.id === itemId) {
+                let finalValue: any = value;
+                if (['unitId', 'warehouseId', 'openingBalance', 'initialBalance', 'purchasePrice', 'sellPrice'].includes(field)) {
+                    finalValue = parseFloat(value) || 0;
+                }
+                return { ...item, [field]: finalValue };
+            }
+            return item;
+        }));
     };
     
     const resetForm = () => {
@@ -85,10 +91,16 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
 
     const handleAddNewClick = () => {
         resetForm();
-        const defaultUnit = units.find(u => u.id === defaultValues.defaultUnitId);
-        const defaultWarehouse = warehouses.find(w => w.id === defaultValues.defaultWarehouseId);
-        if (defaultUnit) setUnitSearchQuery(defaultUnit.name);
-        if (defaultWarehouse) setWarehouseSearchQuery(defaultWarehouse.name);
+        const defaultUnit = units.find(u => u.id === defaultValues.defaultUnitId) || (units.length > 0 ? units[0] : null);
+        const defaultWarehouse = warehouses.find(w => w.id === defaultValues.defaultWarehouseId) || (warehouses.length > 0 ? warehouses[0] : null);
+        if (defaultUnit) {
+            setUnitSearchQuery(defaultUnit.name);
+            setFormData(prev => ({ ...prev, unitId: defaultUnit.id }));
+        }
+        if (defaultWarehouse) {
+            setWarehouseSearchQuery(defaultWarehouse.name);
+            setFormData(prev => ({ ...prev, warehouseId: defaultWarehouse.id }));
+        }
         setIsModalOpen(true);
     };
     
@@ -195,7 +207,7 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                 id: newId,
                 barcode: finalBarcode,
                 name: formData.name.trim(),
-                unitId: formData.unitId,
+                unitId: formData.unitId || (units && units.length > 0 ? units[0].id : 1),
                 warehouseId: formData.warehouseId,
                 openingBalance: formData.initialBalance || 0,
                 initialBalance: formData.initialBalance || 0,
@@ -406,8 +418,8 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                 const warehouseKey = findKey(row, ['المخزن', 'warehouseName', 'Warehouse']);
                 const unitNameRaw = unitKey ? row[unitKey] : '';
                 const warehouseNameRaw = warehouseKey ? row[warehouseKey] : '';
-                const unit = findInList(units, unitNameRaw.toString());
-                const warehouse = findInList(warehouses, warehouseNameRaw.toString());
+                const unit = findInList(units, unitNameRaw.toString()) || units.find(u => u.id === defaultValues.defaultUnitId) || (units.length > 0 ? units[0] : null);
+                const warehouse = findInList(warehouses, warehouseNameRaw.toString()) || warehouses.find(w => w.id === defaultValues.defaultWarehouseId) || (warehouses.length > 0 ? warehouses[0] : null);
 
                 if (!unit || !warehouse) {
                     importErrors.push(`السطر ${i+2}: لم يتم العثور على الوحدة أو المخزن للصنف "${name}".`);
@@ -600,7 +612,7 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                 <p className="text-blue-800 dark:text-blue-200 font-bold">تنبيه: سيتم إنشاء نسخة من الأصناف المفقودة في المخازن الأخرى برصيد صفر.</p>
                 <div className="max-h-60 overflow-y-auto border rounded-lg">
                     <table className="w-full text-right border-collapse">
-                        <thead><tr><th className="p-2 border">المخزن</th><th className="p-2 border">الأصناف المفقودة</th></tr></thead>
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"><tr><th className="p-2 border">المخزن</th><th className="p-2 border">الأصناف المفقودة</th></tr></thead>
                         <tbody>{missingItemsAnalysis.map(g => <tr key={g.warehouse.id} className="border-b"><td className="p-2 border">{g.warehouse.name}</td><td className="p-2 border font-bold text-red-600">{g.items.length} صنف</td></tr>)}</tbody>
                     </table>
                 </div>
@@ -709,8 +721,16 @@ const ItemManagement: React.FC<ItemManagementProps> = React.memo(({
                                  return (
                                      <tr key={item.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-white/20 dark:hover:bg-white/5">
                                          <td className="p-3 text-gray-700 dark:text-gray-300 font-mono">{item.barcode}</td>
-                                         <td className="p-3 font-medium text-gray-800 dark:text-gray-200">{item.name}</td>
-                                         <td className="p-3 text-gray-700 dark:text-gray-300">{unitName}</td>
+                                         <td className="p-3 font-medium text-gray-800 dark:text-gray-200">
+                                            {isQuickEditMode ? <input type="text" value={item.name} onChange={e => handleQuickEditChange(item.id, 'name', e.target.value)} className={tableInputClass.replace('w-24', 'w-full min-w-[150px]')} /> : item.name}
+                                         </td>
+                                         <td className="p-3 text-gray-700 dark:text-gray-300">
+                                            {isQuickEditMode ? (
+                                                <select value={item.unitId} onChange={e => handleQuickEditChange(item.id, 'unitId', e.target.value)} className={tableInputClass.replace('w-24', 'w-full min-w-[100px]')}>
+                                                    {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                </select>
+                                            ) : unitName}
+                                         </td>
                                          <td className="p-3 text-gray-700 dark:text-gray-300">{warehouseName}</td>
                                          
                                          {/* Quick Edit Cells */}

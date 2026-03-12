@@ -223,7 +223,7 @@ const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({ isOpen, onClose, 
                     </div>
 
                     {/* Item List with Quantities */}
-                    <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg max-h-[70vh]">
                         <table className="w-full text-right text-sm">
                             <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
                                 <tr>

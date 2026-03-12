@@ -39,9 +39,9 @@ const AppUnlock: React.FC<AppUnlockProps> = ({ users, setUsers, showNotification
                     المستخدمون المختارون هنا سيتمكنون من استخدام كلمات مرورهم لتجاوز شاشة الحظر.
                 </p>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full bg-transparent">
-                        <thead>
+                <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="min-w-full bg-transparent">
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                             <tr>
                                 <th className={tableHeaderClass}>اسم المستخدم</th>
                                 <th className={tableHeaderClass}>الاسم الكامل</th>

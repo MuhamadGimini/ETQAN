@@ -155,9 +155,9 @@ const UnitManagement: React.FC<UnitManagementProps> = ({ units, setUnits, items,
                             <span>إضافة وحدة جديدة</span>
                         </button>
                     </div>
-                     <div className="overflow-x-auto">
+                     <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
                         <table className="w-full text-right">
-                            <thead className="border-b-2 border-gray-300 dark:border-gray-600">
+                            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b-2 border-gray-300 dark:border-gray-600">
                                 <tr>
                                     <th className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">اسم الوحدة</th>
                                     <th className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">الوصف</th>

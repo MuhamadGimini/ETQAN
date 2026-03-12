@@ -424,9 +424,9 @@ const SalesReport: React.FC<SalesReportProps> = ({
                             </button>
                         </div>
 
-                        <div className="overflow-x-auto border border-indigo-100 dark:border-indigo-900 rounded-xl">
-                            <table className="w-full text-right">
-                                <thead className="bg-indigo-50 dark:bg-indigo-900/40">
+                        <div className="overflow-x-auto border border-indigo-100 dark:border-indigo-900 rounded-xl max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right">
+                                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-indigo-50 dark:bg-indigo-900/40">
                                     {reportData.type === 'summary' ? (
                                         <tr>
                                             <th className="p-3 text-xs font-bold w-16 text-center">الرقم</th>

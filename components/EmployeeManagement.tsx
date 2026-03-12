@@ -162,9 +162,9 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, setE
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-right">
-                    <thead className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 font-bold">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right">
+                    <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 font-bold">
                         <tr>
                             <th className="p-4">الكود</th>
                             <th className="p-4">اسم العامل</th>

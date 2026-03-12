@@ -219,7 +219,7 @@ const WarehouseInventory: React.FC<WarehouseInventoryProps> = ({ items, setItems
 
         const tableContent = `
             <table class="w-full text-right border-collapse mt-2">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                     <tr class="header-bg">
                         <th class="p-2 border border-black w-1/3">اسم الصنف</th>
                         <th class="p-2 border border-black w-24">الباركود</th>

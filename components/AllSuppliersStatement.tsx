@@ -175,6 +175,7 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
             <div class="w-full mt-4">
                 <div class="summary-item"><span>عدد الموردين:</span><span>${printableSummaries.length}</span></div>
                 <div class="summary-item"><span>إجمالي المشتريات:</span><span class="text-red">${totals.totalPurchases.toFixed(2)}</span></div>
+                <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-green">${totals.totalReturns.toFixed(2)}</span></div>
                 <div class="summary-item"><span>إجمالي المدفوعات:</span><span class="text-indigo">${totals.totalPayments.toFixed(2)}</span></div>
                 <div class="summary-item font-black border-t border-gray-300 mt-2 pt-2">
                     <span>إجمالي الدائنية (لهم):</span><span class="text-red">${totalPayables.toFixed(2)}</span>
@@ -299,6 +300,20 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
                                 </tr>
                             ))}
                         </tbody>
+                        <tfoot className="sticky bottom-0 z-10 bg-gray-200 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-600">
+                            <tr>
+                                <td className="p-3 font-bold text-gray-800 dark:text-gray-200">الإجمالي</td>
+                                <td className="p-3 font-bold text-gray-800 dark:text-gray-200"><FormattedNumber value={totals.openingBalance} /></td>
+                                <td className="p-3 font-bold text-green-700 dark:text-green-400"><FormattedNumber value={totals.totalPurchases} /></td>
+                                <td className="p-3 font-bold text-red-700 dark:text-red-400"><FormattedNumber value={totals.totalReturns} /></td>
+                                <td className="p-3 font-bold text-blue-700 dark:text-blue-400"><FormattedNumber value={totals.totalPayments} /></td>
+                                <td className={`p-3 font-bold ${totals.closingBalance > 0 ? 'text-red-700 dark:text-red-500' : totals.closingBalance < 0 ? 'text-green-700 dark:text-green-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                                    <FormattedNumber value={Math.abs(totals.closingBalance)} />
+                                    {totals.closingBalance > 0 ? ' (له)' : totals.closingBalance < 0 ? ' (عليه)' : ''}
+                                </td>
+                                <td className="p-3"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

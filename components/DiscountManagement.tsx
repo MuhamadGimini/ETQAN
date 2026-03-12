@@ -294,9 +294,9 @@ const DiscountManagement: React.FC<DiscountManagementProps> = ({
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-right">
-                        <thead>
+                <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right">
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                             <tr className="bg-gray-200 dark:bg-gray-800 border-b-2 border-gray-300 dark:border-gray-600">
                                 <th className="p-3 text-gray-700 dark:text-gray-300">الباركود</th>
                                 <th className="p-3 text-gray-700 dark:text-gray-300">اسم الصنف</th>

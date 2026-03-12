@@ -232,7 +232,7 @@ const CustomerMovementComparison: React.FC<CustomerMovementComparisonProps> = ({
                     </div>
                     
                     <table>
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                             <tr>
                                 <th class="p-3 border border-gray-300">اسم العميل</th>
                                 <th class="p-3 border border-gray-300">رصيد سابق<br/><span class="text-xs font-normal">(حتى ${formatDateForDisplay(previousEndDate)})</span></th>

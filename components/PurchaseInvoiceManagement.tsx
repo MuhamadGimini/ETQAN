@@ -1,15 +1,15 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Modal, ConfirmationModal, PlusCircleIcon, DeleteIcon, EditIcon, PrintIcon, ViewIcon, FormattedNumber, ChevronDownIcon, ArchiveIcon, WhatsAppIcon } from './Shared';
+import { Modal, ConfirmationModal, PlusCircleIcon, DeleteIcon, EditIcon, PrintIcon, ViewIcon, FormattedNumber, ChevronDownIcon, ArchiveIcon, WhatsAppIcon, DownloadIcon } from './Shared';
 import type { PurchaseInvoice, PurchaseInvoiceItem, Item, Supplier, Warehouse, CompanyData, NotificationType, PurchaseReturn, SupplierPayment, MgmtUser, DefaultValues, Unit, DocToView, SalesInvoice, SalesReturn, CustomerReceipt, Expense, TreasuryTransfer, Treasury } from '../types';
 import QuickAddItemModal from './QuickAddItemModal';
 import QuickAddContactModal from './QuickAddContactModal';
 import { formatNumber, normalizeText, searchMatch, formatDateForDisplay, roundTo2, formatPhoneNumberForWhatsApp } from '../utils';
-import { getReportPrintTemplate } from '../utils/printing';
 import BarcodePrintModal, { BarcodeItem } from './BarcodePrintModal';
 import { useDateInput } from '../hooks/useDateInput';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
+import { exportToExcel } from '../services/excel';
 
 interface PurchaseInvoiceManagementProps {
     purchaseInvoices: PurchaseInvoice[];
@@ -326,55 +326,127 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const headers = ['م', 'الصنف', 'الكمية', 'السعر', 'إجمالي'];
-        const rowsHtml = inv.items.map((it, idx) => {
+        const itemsRows = inv.items.map((it, idx) => {
             const itemData = items.find(i => i.id === it.itemId);
+            const rowTotal = it.price * it.quantity;
             return `
-                <tr>
+                <tr class="item-row">
                     <td>${idx + 1}</td>
                     <td style="text-align: right;">${itemData?.name || '-'}</td>
                     <td>${it.quantity}</td>
                     <td>${it.price.toFixed(2)}</td>
-                    <td class="font-black">${(it.price * it.quantity).toFixed(2)}</td>
+                    <td class="bold">${rowTotal.toFixed(2)}</td>
                 </tr>
             `;
-        }).join('') + `
-            <tr style="background: #f0fdf4; font-weight: 900;">
-                <td colspan="2" style="text-align: right;">إجمالي الأصناف: ${inv.items.length} | القطع: ${inv.items.reduce((s, i) => s + i.quantity, 0)}</td>
-                <td></td>
-                <td>-</td>
-                <td>${inv.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</td>
-            </tr>
-        `;
+        }).join('');
 
-        const summaryHtml = `
-            <div class="summary-item"><span>الإجمالي:</span><span>${inv.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</span></div>
-            <div class="summary-item"><span>الخصم:</span><span class="text-red">-${inv.discount.toFixed(2)}</span></div>
-            <div class="summary-item"><span>الصافي:</span><span class="text-green">${invNet.toFixed(2)}</span></div>
-        `;
+        printWindow.document.write(`
+            <html dir="rtl">
+            <head>
+                <title>فاتورة مشتريات رقم ${inv.id}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
+                    .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+                    .logo-section { width: 33%; text-align: left; }
+                    .logo-section img { max-width: 140px; max-height: 90px; object-fit: contain; }
+                    .company-center { width: 33%; text-align: center; }
+                    .company-center h1 { margin: 0; font-size: 1.6rem; font-weight: 900; color: #047857; }
+                    .invoice-badge { display: inline-block; border: 2px solid #047857; color: #047857; padding: 4px 15px; border-radius: 6px; margin-top: 8px; font-weight: 900; font-size: 1.1rem; }
+                    .doc-info { width: 33%; text-align: right; }
+                    
+                    .details-block { margin: 15px 0; font-size: 12pt; border-right: 4px solid #047857; padding-right: 12px; }
+                    .details-block p { margin: 4px 0; font-weight: bold; }
+                    .bold { font-weight: bold; }
+                    .heavy { font-weight: 900; }
 
-        const secondarySummaryHtml = `
-            <div class="summary-item"><span>المورد:</span><span>${supplier?.name || '-'}</span></div>
-            <div class="summary-item"><span>رصيد سابق:</span><span class="text-green">${balanceBefore.toFixed(2)}</span></div>
-            <div class="summary-item"><span>رصيد بعد الفاتورة:</span><span class="text-green">${balanceAfter.toFixed(2)}</span></div>
-        `;
+                    table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #047857; }
+                    th { background: #047857; color: white; padding: 8px; text-align: center; font-size: 12pt; border: 1px solid #047857; }
+                    td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11pt; }
+                    
+                    .item-row:nth-child(even) { background-color: #f0fdf4; }
+                    
+                    @media print {
+                        .item-row:nth-child(even) { background-color: transparent !important; }
+                        th { background: #047857 !important; color: white !important; -webkit-print-color-adjust: exact !important; }
+                        .invoice-badge { border-color: #047857 !important; color: #047857 !important; -webkit-print-color-adjust: exact !important; }
+                        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
 
-        const signaturesHtml = `
-            <div class="signature-box">
-                <div class="signature-title">المستلم</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">أمين الخزينة</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">مدير الحسابات</div>
-                <div class="signature-line"></div>
-            </div>
-        `;
+                    .summary-section { display: flex; justify-content: flex-end; margin-top: 15px; }
+                    .summary-box { width: 280px; border: 1px solid #047857; border-radius: 8px; padding: 10px; background: #f0fdf4; }
+                    .summary-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #ddd; font-weight: bold; font-size: 11pt; }
+                    .summary-row.total { border-bottom: none; border-top: 2px solid #047857; margin-top: 5px; padding-top: 8px; color: #047857; font-size: 12pt; }
+                    
+                    .footer-block { margin-top: 40px; border-top: 2px solid #047857; padding-top: 15px; display: flex; justify-content: space-between; font-size: 10pt; font-weight: bold; }
+                    .thanks { text-align: center; margin-top: 20px; font-weight: 900; color: #475569; font-size: 11pt; }
+                </style>
+            </head>
+            <body onload="window.print(); window.close();">
+                <div class="header-top">
+                    <div class="doc-info">
+                         <p class="heavy">التاريخ: ${formatDateForDisplay(inv.date)}</p>
+                         <p class="heavy">الرقم: ${inv.id}</p>
+                    </div>
+                    <div class="company-center">
+                        <h1>${companyData.name}</h1>
+                        <div class="invoice-badge">فاتورة مشتريات</div>
+                    </div>
+                    <div class="logo-section">
+                        ${companyData.logo ? `<img src="${companyData.logo}" />` : ''}
+                    </div>
+                </div>
 
-        printWindow.document.write(getReportPrintTemplate('فاتورة مشتريات', `مستند رقم ${inv.id}`, companyData, headers, rowsHtml, summaryHtml, secondarySummaryHtml, signaturesHtml, 'A5 landscape'));
+                <div class="details-block">
+                    <p>المورد: ${supplier?.name || '-'}</p>
+                    <p>فاتورة المورد: ${inv.supplierInvoiceNumber || '-'}</p>
+                    <p>الرصيد قبل الفاتورة: <span style="color: #047857;">${balanceBefore.toFixed(2)}</span></p>
+                </div>
+
+                <table>
+                    <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th style="width: 40px;">م</th>
+                            <th>الصنف</th>
+                            <th style="width: 70px;">الكمية</th>
+                            <th style="width: 100px;">السعر</th>
+                            <th style="width: 120px;">إجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows}
+                    </tbody>
+                    <tr style="background: #f0fdf4; font-weight: 900;">
+                        <td colspan="2" style="text-align: right;">إجمالي الأصناف: ${inv.items.length} | القطع: ${inv.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                        <td></td>
+                        <td>-</td>
+                        <td>${inv.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</td>
+                    </tr>
+                </table>
+
+                <div class="summary-section">
+                    <div class="summary-box">
+                        <div class="summary-row"><span>الإجمالي:</span><span>${inv.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</span></div>
+                        <div class="summary-row"><span>الخصم:</span><span style="color: #b91c1c;">-${inv.discount.toFixed(2)}</span></div>
+                        <div class="summary-row total"><span class="heavy">الصافي:</span><span class="heavy">${invNet.toFixed(2)}</span></div>
+                        <div class="summary-row" style="margin-top: 8px; border-top: 1px solid #ccc; padding-top: 6px;">
+                            <span>الرصيد بعد الفاتورة:</span>
+                            <span style="color: #047857;">${balanceAfter.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-block">
+                    <div style="text-align: right; width: 50%;">العنوان: ${companyData.address}</div>
+                    <div style="text-align: left; width: 50%;">تليفون: ${companyData.phone1} ${companyData.phone2 ? ' - ' + companyData.phone2 : ''}</div>
+                </div>
+
+                <div class="thanks">
+                    ${defaultValues.invoiceFooter || 'تم استلام البضاعة بحالة جيدة'}
+                </div>
+            </body>
+            </html>
+        `);
         printWindow.document.close();
     };
 
@@ -450,6 +522,25 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
     const subtotal = useMemo(() => newInvoice.items.reduce((acc, item) => acc + item.quantity * item.price, 0), [newInvoice.items]);
     const total = (subtotal - newInvoice.discount) * (1 + newInvoice.tax / 100);
 
+    const handleExportExcel = () => {
+        const dataToExport = filteredLog.map(inv => {
+            const supplier = suppliers.find(s => s.id === inv.supplierId);
+            const itemsTotal = inv.items.reduce((s, i) => s + i.price * i.quantity, 0);
+            const netTotal = (itemsTotal - inv.discount) * (1 + inv.tax / 100);
+            
+            return {
+                'رقم الفاتورة': inv.id,
+                'فاتورة المورد': inv.supplierInvoiceNumber || '',
+                'التاريخ': inv.date,
+                'المورد': supplier?.name || 'غير معروف',
+                'النوع': inv.type === 'cash' ? 'نقدي' : 'آجل',
+                'الإجمالي': netTotal,
+                'ملاحظات': inv.notes || ''
+            };
+        });
+        exportToExcel(dataToExport, 'فواتير_المشتريات');
+    };
+
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
     const compactCardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-4 border border-white/40 dark:bg-gray-700/30 dark:border-white/20 w-full"; 
     const inputClass = "h-11 w-full px-4 py-2 bg-white dark:bg-gray-800 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg focus:outline-none focus:border-emerald-600 text-black dark:text-white font-bold text-base transition duration-300 disabled:opacity-70 font-bold";
@@ -517,7 +608,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                 </div>
             </Modal>
 
-            <QuickAddItemModal isOpen={isQuickAddItemModalOpen} onClose={() => setIsQuickAddItemModalOpen(false)} onItemAdded={handleItemQuickAdded} items={items} units={units} warehouses={warehouses} defaultWarehouseId={newInvoice.warehouseId} currentUser={currentUser} />
+            <QuickAddItemModal isOpen={isQuickAddItemModalOpen} onClose={() => setIsQuickAddItemModalOpen(false)} onItemAdded={handleItemQuickAdded} items={items} units={units} warehouses={warehouses} defaultWarehouseId={newInvoice.warehouseId} defaultUnitId={defaultValues.defaultUnitId} currentUser={currentUser} />
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
                 <div className={`${cardClass} lg:col-span-9 pb-10 relative z-30`}>
@@ -726,6 +817,9 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
                                 <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">إجمالي القيمة</p>
                                 <p className="text-xl font-black text-blue-700 dark:text-blue-300"><FormattedNumber value={totalInLog} /></p>
                             </div>
+                            <button onClick={(e) => { e.stopPropagation(); handleExportExcel(); }} className="bg-emerald-600 text-white p-2 rounded-lg shadow-sm hover:bg-emerald-700 transition-colors flex items-center justify-center" title="تصدير إلى إكسيل">
+                                <DownloadIcon className="w-6 h-6 m-0 text-white" />
+                            </button>
                         </div>
                     )}
                 </div>

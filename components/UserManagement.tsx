@@ -165,9 +165,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, setUsers, showNo
                 </div>
                 <div className="bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20">
                      <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">قائمة المستخدمين</h2>
-                     <div className="overflow-x-auto">
+                     <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
                         <table className="w-full text-right">
-                            <thead className="border-b-2 border-gray-300 dark:border-gray-600">
+                            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 border-b-2 border-gray-300 dark:border-gray-600">
                                 <tr>
                                     <th className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">الاسم بالكامل</th>
                                     <th className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">اسم المستخدم</th>

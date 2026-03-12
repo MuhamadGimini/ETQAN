@@ -12,6 +12,7 @@ interface QuickAddItemModalProps {
     units: Unit[];
     warehouses: Warehouse[];
     defaultWarehouseId: number;
+    defaultUnitId?: number;
     currentUser: MgmtUser;
 }
 
@@ -23,11 +24,12 @@ const QuickAddItemModal: React.FC<QuickAddItemModalProps> = ({
     units,
     warehouses,
     defaultWarehouseId,
+    defaultUnitId,
     currentUser,
 }) => {
     const initialFormState = {
         name: '',
-        unitId: (units && units[0]?.id) || 0,
+        unitId: defaultUnitId || (units && units[0]?.id) || 0,
         warehouseId: defaultWarehouseId,
         purchasePrice: NaN,
         sellPrice: NaN,
@@ -47,11 +49,11 @@ const QuickAddItemModal: React.FC<QuickAddItemModalProps> = ({
             setNewItemData({
                 ...initialFormState,
                 warehouseId: defaultWarehouseId,
-                unitId: (units && units[0]?.id) || 0,
+                unitId: defaultUnitId || (units && units[0]?.id) || 0,
             });
             
             // Set initial search queries
-            const defaultUnit = units && units[0];
+            const defaultUnit = units && units.find(u => u.id === defaultUnitId) || (units && units[0]);
             if (defaultUnit) setUnitSearchQuery(defaultUnit.name);
             else setUnitSearchQuery('');
 
@@ -59,7 +61,7 @@ const QuickAddItemModal: React.FC<QuickAddItemModalProps> = ({
             if (defaultWh) setWarehouseSearchQuery(defaultWh.name);
             else setWarehouseSearchQuery('');
         }
-    }, [isOpen, defaultWarehouseId, units, warehouses]);
+    }, [isOpen, defaultWarehouseId, defaultUnitId, units, warehouses]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -130,7 +132,7 @@ const QuickAddItemModal: React.FC<QuickAddItemModalProps> = ({
             id: newId,
             barcode: barcodeToUse,
             name: newItemData.name.trim(),
-            unitId: newItemData.unitId,
+            unitId: newItemData.unitId || (units && units.length > 0 ? units[0].id : 1),
             warehouseId: newItemData.warehouseId,
             purchasePrice: newItemData.purchasePrice,
             sellPrice: newItemData.sellPrice,
