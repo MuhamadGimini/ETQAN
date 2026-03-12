@@ -17,13 +17,15 @@ interface TopNavProps {
     onThemeChange: (theme: 'light' | 'dark') => void;
     currentViewLabel: string;
     isCloudConnected: boolean;
+    isSyncing: boolean;
+    lastSyncTime: number | null;
     updateAvailable: boolean;
     firebaseConfig: FirebaseConfig | null;
     isDBReady: boolean;
 }
 
 const TopNav: React.FC<TopNavProps> = ({ 
-    onNavigate, currentUser, licenseStatus, user, onLogout, theme, onThemeChange, currentViewLabel, isCloudConnected, updateAvailable, firebaseConfig, isDBReady
+    onNavigate, currentUser, licenseStatus, user, onLogout, theme, onThemeChange, currentViewLabel, isCloudConnected, isSyncing, lastSyncTime, updateAvailable, firebaseConfig, isDBReady
 }) => {
   
   const filteredMenuItems = React.useMemo(() => {
@@ -157,9 +159,20 @@ const TopNav: React.FC<TopNavProps> = ({
             
             {/* Cloud Status Indicator */}
             {firebaseConfig && (
-                 <div className="flex items-center gap-2" title={isCloudConnected ? 'متصل بالسحابة' : 'غير متصل'}>
-                     <span className={`h-3 w-3 rounded-full ${isCloudConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                     <span className={`text-sm font-bold ${isCloudConnected ? 'text-green-600' : 'text-red-600'}`}>{isCloudConnected ? 'متصل' : 'غير متصل'}</span>
+                 <div className="flex items-center gap-2" title={isCloudConnected ? (isSyncing ? 'جاري المزامنة...' : 'متصل بالسحابة') : 'غير متصل'}>
+                     <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-2">
+                            <span className={`h-3 w-3 rounded-full ${isCloudConnected ? (isSyncing ? 'bg-blue-500 animate-pulse' : 'bg-green-500') : 'bg-red-500'}`}></span>
+                            <span className={`text-sm font-bold ${isCloudConnected ? (isSyncing ? 'text-blue-600' : 'text-green-600') : 'text-red-600'}`}>
+                                {isCloudConnected ? (isSyncing ? 'جاري المزامنة...' : 'متصل') : 'غير متصل'}
+                            </span>
+                        </div>
+                        {isCloudConnected && lastSyncTime && (
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                                آخر مزامنة: {new Date(lastSyncTime).toLocaleTimeString('ar-EG')}
+                            </span>
+                        )}
+                     </div>
                 </div>
             )}
 

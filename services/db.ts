@@ -1,6 +1,6 @@
 
 const DB_NAME = 'pos_native_db';
-const DB_VERSION = 11; // تم التحديث لإضافة onlineSessions
+const DB_VERSION = 12; // تم التحديث لإضافة metadata
 
 const STORE_NAMES = [
     'users', 'companyData', 'warehouses', 'units', 'items', 'treasuries',
@@ -9,7 +9,8 @@ const STORE_NAMES = [
     'heldInvoices', 'heldPurchaseInvoices', 'salesReturns', 'purchaseInvoices', 'purchaseReturns',
     'warehouseTransfers', 'treasuryTransfers', 'defaultValues',
     'activeDiscounts', 'selectedDiscountItems', 'systemSettings', 'databases', 'importCalculatorHistory',
-    'employees', 'departments', 'chatMessages', 'attendanceRecords', 'salaryRecords', 'onlineSessions'
+    'employees', 'departments', 'chatMessages', 'attendanceRecords', 'salaryRecords', 'onlineSessions',
+    'metadata'
 ];
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -36,7 +37,7 @@ export const initDB = (): Promise<IDBDatabase> => {
                     if (!db.objectStoreNames.contains(storeName)) {
                         if (['activeDiscounts', 'selectedDiscountItems'].includes(storeName)) {
                              db.createObjectStore(storeName, { keyPath: 'itemId' });
-                        } else if (['systemSettings'].includes(storeName)) {
+                        } else if (['systemSettings', 'metadata'].includes(storeName)) {
                              db.createObjectStore(storeName, { keyPath: 'key' });
                         } else if (['companyData', 'defaultValues'].includes(storeName)) {
                              db.createObjectStore(storeName);
@@ -116,12 +117,34 @@ export const getTableData = async (tableName: string): Promise<any> => {
     }
 };
 
-export const saveTableData = async (tableName: string, data: any): Promise<void> => {
+export const updateTableMetadata = async (tableName: string, timestamp: number): Promise<void> => {
+    try {
+        const { store } = await getStore('metadata', 'readwrite');
+        store.put({ key: tableName, lastUpdated: timestamp });
+    } catch (e) { console.error(e); }
+};
+
+export const getTableMetadata = async (tableName: string): Promise<number> => {
+    try {
+        const { store } = await getStore('metadata');
+        return new Promise((resolve) => {
+            const req = store.get(tableName);
+            req.onsuccess = () => resolve(req.result ? req.result.lastUpdated : 0);
+            req.onerror = () => resolve(0);
+        });
+    } catch (e) { return 0; }
+};
+
+export const saveTableData = async (tableName: string, data: any, updateTimestamp = true): Promise<void> => {
     try {
         const { store, tx } = await getStore(tableName, 'readwrite');
         let dataToSave = tableName === 'activeDiscounts' 
             ? Object.entries(data).map(([itemId, discountPrice]) => ({ itemId: Number(itemId), discountPrice }))
             : (Array.isArray(data) ? data : [data]);
+
+        if (updateTimestamp) {
+            await updateTableMetadata(tableName, Date.now());
+        }
 
         return new Promise<void>((resolve, reject) => {
             const clearReq = store.clear();
@@ -136,11 +159,14 @@ export const saveTableData = async (tableName: string, data: any): Promise<void>
     } catch (e) { console.error(`Error saving ${tableName}:`, e); }
 };
 
-export const saveSingleRow = async (tableName: string, data: any): Promise<void> => {
+export const saveSingleRow = async (tableName: string, data: any, updateTimestamp = true): Promise<void> => {
     if (data == null) return;
-    if (tableName === 'activeDiscounts') return saveTableData(tableName, data);
+    if (tableName === 'activeDiscounts') return saveTableData(tableName, data, updateTimestamp);
     try {
         const { store } = await getStore(tableName, 'readwrite');
+        if (updateTimestamp) {
+            await updateTableMetadata(tableName, Date.now());
+        }
         return new Promise<void>((resolve, reject) => {
              const clearReq = store.clear();
              clearReq.onsuccess = () => {

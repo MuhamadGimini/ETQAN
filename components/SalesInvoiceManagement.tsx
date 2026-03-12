@@ -5,6 +5,7 @@ import type { SalesInvoice, SalesInvoiceItem, Item, Customer, SalesRepresentativ
 import QuickAddItemModal from './QuickAddItemModal';
 import QuickAddContactModal from './QuickAddContactModal';
 import { formatNumber, formatNumberWithSmallerDecimals, searchMatch, formatDateForDisplay, formatPhoneNumberForWhatsApp } from '../utils';
+import { getReportPrintTemplate } from '../utils/printing';
 import { useDateInput } from '../hooks/useDateInput';
 
 interface SalesInvoiceManagementProps {
@@ -421,7 +422,6 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
 
     const handlePrint = (invoice: SalesInvoice, isHeld: boolean = false) => {
         const customer = customers.find(c => c.id === invoice.customerId);
-        const salesRep = salesRepresentatives.find(r => r.id === invoice.salesRepId);
         const balanceBefore = calculateBalanceAtPoint(invoice.customerId, invoice.date, invoice.id);
         const invNet = (invoice.items.reduce((s, i) => s + i.price * i.quantity, 0) - invoice.discount) * (1 + invoice.tax / 100);
         const balanceAfter = balanceBefore + (invNet - (invoice.paidAmount || 0));
@@ -429,128 +429,57 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const itemsRows = invoice.items.map((it, idx) => {
+        const headers = ['م', 'الصنف', 'الكمية', 'السعر', 'إجمالي'];
+        const rowsHtml = invoice.items.map((it, idx) => {
             const itemData = items.find(i => i.id === it.itemId);
-            const rowTotal = it.price * it.quantity;
             return `
-                <tr class="item-row">
+                <tr>
                     <td>${idx + 1}</td>
                     <td style="text-align: right;">${itemData?.name || '-'}</td>
                     <td>${it.quantity}</td>
                     <td>${it.price.toFixed(2)}</td>
-                    <td class="bold">${rowTotal.toFixed(2)}</td>
+                    <td class="font-black">${(it.price * it.quantity).toFixed(2)}</td>
                 </tr>
             `;
-        }).join('');
+        }).join('') + `
+            <tr style="background: #f8fafc; font-weight: 900;">
+                <td colspan="2" style="text-align: right;">إجمالي الأصناف: ${invoice.items.length} | القطع: ${invoice.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                <td></td>
+                <td>-</td>
+                <td>${invoice.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</td>
+            </tr>
+        `;
 
         const docTitle = isHeld ? "إذن تسليم بضاعة" : "فاتورة مبيعات";
 
-        printWindow.document.write(`
-            <html dir="rtl">
-            <head>
-                <title>${docTitle} رقم ${invoice.id}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
-                    .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-                    .logo-section { width: 33%; text-align: left; }
-                    .logo-section img { max-width: 140px; max-height: 90px; object-fit: contain; }
-                    .company-center { width: 33%; text-align: center; }
-                    .company-center h1 { margin: 0; font-size: 1.6rem; font-weight: 900; color: #1e3a8a; }
-                    .invoice-badge { display: inline-block; border: 2px solid #1e3a8a; color: #1e3a8a; padding: 4px 15px; border-radius: 6px; margin-top: 8px; font-weight: 900; font-size: 1.1rem; }
-                    .doc-info { width: 33%; text-align: right; }
-                    
-                    .details-block { margin: 15px 0; font-size: 12pt; border-right: 4px solid #1e3a8a; padding-right: 12px; }
-                    .details-block p { margin: 4px 0; font-weight: bold; }
-                    .bold { font-weight: bold; }
-                    .heavy { font-weight: 900; }
+        const summaryHtml = `
+            <div class="summary-item"><span>الإجمالي:</span><span>${invoice.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</span></div>
+            <div class="summary-item"><span>الخصم:</span><span class="text-red">-${invoice.discount.toFixed(2)}</span></div>
+            <div class="summary-item"><span>الصافي:</span><span class="text-indigo">${invNet.toFixed(2)}</span></div>
+        `;
 
-                    table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #1e3a8a; }
-                    th { background: #1e3a8a; color: white; padding: 8px; text-align: center; font-size: 12pt; border: 1px solid #1e3a8a; }
-                    td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11pt; }
-                    
-                    .item-row:nth-child(even) { background-color: #f1f5f9; }
-                    
-                    @media print {
-                        .item-row:nth-child(even) { background-color: transparent !important; }
-                        th { background: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact; }
-                        .invoice-badge { border-color: #1e3a8a !important; color: #1e3a8a !important; -webkit-print-color-adjust: exact !important; }
-                        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    }
+        const secondarySummaryHtml = `
+            <div class="summary-item"><span>العميل:</span><span>${customer?.name || 'عميل نقدي'}</span></div>
+            <div class="summary-item"><span>رصيد سابق:</span><span class="text-red">${balanceBefore.toFixed(2)}</span></div>
+            <div class="summary-item"><span>رصيد بعد الفاتورة:</span><span class="text-red">${balanceAfter.toFixed(2)}</span></div>
+        `;
 
-                    .summary-section { display: flex; justify-content: flex-end; margin-top: 15px; }
-                    .summary-box { width: 280px; border: 1px solid #1e3a8a; border-radius: 8px; padding: 10px; background: #f8fafc; }
-                    .summary-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #ddd; font-weight: bold; font-size: 11pt; }
-                    .summary-row.total { border-bottom: none; border-top: 2px solid #1e3a8a; margin-top: 5px; padding-top: 8px; color: #1e3a8a; font-size: 12pt; }
-                    
-                    .footer-block { margin-top: 40px; border-top: 2px solid #1e3a8a; padding-top: 15px; display: flex; justify-content: space-between; font-size: 10pt; font-weight: bold; }
-                    .thanks { text-align: center; margin-top: 20px; font-weight: 900; color: #475569; font-size: 11pt; }
-                </style>
-            </head>
-            <body onload="window.print(); window.close();">
-                <div class="header-top">
-                    <div class="doc-info">
-                         <p class="heavy">التاريخ: ${formatDateForDisplay(invoice.date)}</p>
-                         <p class="heavy">الرقم: ${invoice.id}</p>
-                    </div>
-                    <div class="company-center">
-                        <h1>${companyData.name}</h1>
-                        <div class="invoice-badge">${docTitle}</div>
-                    </div>
-                    <div class="logo-section">
-                        ${companyData.logo ? `<img src="${companyData.logo}" />` : ''}
-                    </div>
-                </div>
+        const signaturesHtml = `
+            <div class="signature-box">
+                <div class="signature-title">المستلم</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">أمين الخزينة</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">مدير الحسابات</div>
+                <div class="signature-line"></div>
+            </div>
+        `;
 
-                <div class="details-block">
-                    <p>العميل: ${customer?.name || 'عميل نقدي'}</p>
-                    <p>الرصيد قبل الفاتورة: <span style="color: #dc2626;">${balanceBefore.toFixed(2)}</span></p>
-                </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 40px;">م</th>
-                            <th>الصنف</th>
-                            <th style="width: 70px;">الكمية</th>
-                            <th style="width: 100px;">السعر</th>
-                            <th style="width: 120px;">إجمالي</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsRows}
-                    </tbody>
-                    <tr style="background: #f8fafc; font-weight: 900;">
-                        <td colspan="2" style="text-align: right;">إجمالي الأصناف: ${invoice.items.length} | القطع: ${invoice.items.reduce((s, i) => s + i.quantity, 0)}</td>
-                        <td></td>
-                        <td>-</td>
-                        <td>${invoice.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</td>
-                    </tr>
-                </table>
-
-                <div class="summary-section">
-                    <div class="summary-box">
-                        <div class="summary-row"><span>الإجمالي:</span><span>${invoice.items.reduce((s, i) => s + i.price * i.quantity, 0).toFixed(2)}</span></div>
-                        <div class="summary-row"><span>الخصم:</span><span style="color: #dc2626;">-${invoice.discount.toFixed(2)}</span></div>
-                        <div class="summary-row total"><span class="heavy">الصافي:</span><span class="heavy">${invNet.toFixed(2)}</span></div>
-                        <div class="summary-row" style="margin-top: 8px; border-top: 1px solid #ccc; padding-top: 6px;">
-                            <span>رصيد بعد الفاتورة:</span>
-                            <span style="color: #dc2626;">${balanceAfter.toFixed(2)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="footer-block">
-                    <div>العنوان: ${companyData.address}</div>
-                    <div>تليفون: ${companyData.phone1} ${companyData.phone2 ? ' - ' + companyData.phone2 : ''}</div>
-                </div>
-
-                <div class="thanks">
-                    ${defaultValues.invoiceFooter || 'شكراً لزيارتكم ونتمنى رؤيتكم مرة أخرى'}
-                </div>
-            </body>
-            </html>
-        `);
+        printWindow.document.write(getReportPrintTemplate(docTitle, `مستند رقم ${invoice.id}`, companyData, headers, rowsHtml, summaryHtml, secondarySummaryHtml, signaturesHtml));
         printWindow.document.close();
     };
 

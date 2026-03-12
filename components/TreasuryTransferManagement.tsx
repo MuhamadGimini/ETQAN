@@ -1,9 +1,11 @@
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { TreasuryTransfer, Treasury, NotificationType, MgmtUser, CustomerReceipt, SupplierPayment, Expense, SalesInvoice, PurchaseInvoice, SalesReturn, PurchaseReturn, DefaultValues } from '../types';
+import type { TreasuryTransfer, Treasury, NotificationType, MgmtUser, CustomerReceipt, SupplierPayment, Expense, SalesInvoice, PurchaseInvoice, SalesReturn, PurchaseReturn, DefaultValues, CompanyData } from '../types';
 import { ConfirmationModal, DeleteIcon, EditIcon, ViewIcon, PrintIcon, WhatsAppIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
+import { formatDateForDisplay } from '../utils';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
 
@@ -21,6 +23,7 @@ interface TreasuryTransferManagementProps {
     salesReturns: SalesReturn[];
     purchaseReturns: PurchaseReturn[];
     defaultValues: DefaultValues;
+    companyData: CompanyData;
     // FIX: Added draft and isEditing props to resolve TS error in App.tsx
     draft: any;
     setDraft: React.Dispatch<React.SetStateAction<any>>;
@@ -42,6 +45,7 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
     salesReturns,
     purchaseReturns,
     defaultValues,
+    companyData,
     draft, setDraft, isEditing, setIsEditing
 }) => {
     const getNextTransferId = () => {
@@ -182,52 +186,44 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
     };
 
     const handlePrint = (transfer: TreasuryTransfer) => {
-        const fromTreasury = treasuries.find(t => t.id === transfer.fromTreasuryId)?.name;
-        const toTreasury = treasuries.find(t => t.id === transfer.toTreasuryId)?.name;
+        const fromTreasury = treasuries.find(t => t.id === transfer.fromTreasuryId)?.name || '';
+        const toTreasury = treasuries.find(t => t.id === transfer.toTreasuryId)?.name || '';
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        printWindow.document.write(`
-            <html dir="rtl">
-                <head>
-                    <title>إيصال تحويل نقدية #${transfer.id}</title>
-                    <style>
-                        body { font-family: 'Cairo', sans-serif; padding: 40px; }
-                        .container { border: 2px solid #000; padding: 20px; border-radius: 10px; }
-                        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-                        .row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px; }
-                        .amount { font-size: 24px; font-weight: bold; text-align: center; margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
-                        .footer { margin-top: 50px; display: flex; justify-content: space-between; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h2>إيصال تحويل نقدية</h2>
-                            <p>رقم التحويل: ${transfer.id}</p>
-                            <p>التاريخ: ${new Date(transfer.date).toLocaleDateString('ar-EG')}</p>
-                        </div>
-                        <div class="row">
-                            <div><strong>من خزينة:</strong> ${fromTreasury}</div>
-                            <div><strong>إلى خزينة:</strong> ${toTreasury}</div>
-                        </div>
-                        <div class="amount">
-                            المبلغ: ${transfer.amount.toFixed(2)} ج.م
-                        </div>
-                        <p><strong>ملاحظات:</strong> ${transfer.notes || 'لا يوجد'}</p>
-                        <p><strong>تم بواسطة:</strong> ${transfer.createdBy || 'غير معروف'}</p>
-                        
-                        <div class="footer">
-                            <div>توقيع المستلم</div>
-                            <div>توقيع المسلم</div>
-                            <div>المدير المسؤول</div>
-                        </div>
-                    </div>
-                    <script>window.print(); window.close();</script>
-                </body>
-            </html>
-        `);
+        const headers = ['رقم التحويل', 'التاريخ', 'من خزينة', 'إلى خزينة', 'المبلغ'];
+        const rowsHtml = `
+            <tr>
+                <td>${transfer.id}</td>
+                <td>${formatDateForDisplay(transfer.date)}</td>
+                <td>${fromTreasury}</td>
+                <td>${toTreasury}</td>
+                <td class="font-black text-blue">${transfer.amount.toFixed(2)}</td>
+            </tr>
+        `;
+
+        const summaryHtml = `
+            <div class="summary-item"><span>المبلغ:</span><span class="text-blue">${transfer.amount.toFixed(2)}</span></div>
+            <div class="summary-item"><span>ملاحظات:</span><span>${transfer.notes || '-'}</span></div>
+        `;
+
+        const signaturesHtml = `
+            <div class="signature-box">
+                <div class="signature-title">المسلم</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">المستلم</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">مدير الحسابات</div>
+                <div class="signature-line"></div>
+            </div>
+        `;
+
+        printWindow.document.write(getReportPrintTemplate('إيصال تحويل نقدية', `مستند رقم ${transfer.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml));
         printWindow.document.close();
     };
 

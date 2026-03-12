@@ -94,6 +94,9 @@ const About: React.FC<AboutProps> = ({ updateAvailable, onNavigate, activeDataba
                 </h2>
                 <ul className="space-y-3 list-disc list-inside text-gray-700 dark:text-gray-300 text-lg">
                     <li>
+                        <span className="font-bold text-blue-600 dark:text-blue-400">المزامنة السحابية المتقدمة:</span> نظام مزامنة جديد كلياً يعتمد على Firebase Realtime Database، يتيح ربط أكثر من جهاز (كاشير، مدير، مخزن) للعمل على نفس البيانات في وقت واحد مع تتبع دقيق لزمن التحديث لكل جدول عبر مجلد metadata.
+                    </li>
+                    <li>
                         <span className="font-bold text-blue-600 dark:text-blue-400">نظام المحادثة والمساعد الذكي (الشات):</span> إضافة نظام دردشة متكامل يربط بين الموظفين، مع مساعد ذكي (AI) لتحليل البيانات والإجابة على الاستفسارات المالية، ودعم الأوامر الصوتية، بالإضافة إلى مشغل مدمج لإذاعة القرآن الكريم.
                     </li>
                     <li>

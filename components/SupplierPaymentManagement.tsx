@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon, WhatsAppIcon } from './Shared';
+import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon, WhatsAppIcon, PrintIcon } from './Shared';
 // consolidated import of DocToView from types
 import type { SupplierPayment, Supplier, Treasury, NotificationType, MgmtUser, PurchaseInvoice, PurchaseReturn, DefaultValues, CompanyData, CustomerReceipt, Expense, TreasuryTransfer, SalesInvoice, SalesReturn, DocToView } from '../types';
 import { searchMatch, formatPhoneNumberForWhatsApp, formatDateForDisplay, formatNumber } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
+import { getReportPrintTemplate } from '../utils/printing';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
 
@@ -211,6 +212,50 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
     };
 
     const resetForm = () => { setIsEditing(false); setIsViewing(false); setDraft(null); setSupplierBalance(null); setSupplierSearchQuery(''); };
+
+    const handlePrint = (payment: SupplierPayment) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const supplier = suppliers.find(s => s.id === payment.supplierId)?.name || '';
+        const treasury = treasuries.find(t => t.id === payment.treasuryId)?.name || '';
+        const methodLabel = payment.paymentMethod === 'cash' ? 'نقدي' : payment.paymentMethod === 'check' ? 'شيك' : 'خصم مكتسب';
+
+        const headers = ['رقم السند', 'التاريخ', 'المورد', 'طريقة الدفع', 'المبلغ', 'الخزينة'];
+        const rowsHtml = `
+            <tr>
+                <td>${payment.id}</td>
+                <td>${formatDateForDisplay(payment.date)}</td>
+                <td>${supplier}</td>
+                <td>${methodLabel}</td>
+                <td class="font-black text-red">${payment.amount.toFixed(2)}</td>
+                <td>${treasury}</td>
+            </tr>
+        `;
+
+        const summaryHtml = `
+            <div class="summary-item"><span>المبلغ:</span><span class="text-red">${payment.amount.toFixed(2)}</span></div>
+            <div class="summary-item"><span>ملاحظات:</span><span>${payment.notes || '-'}</span></div>
+        `;
+
+        const signaturesHtml = `
+            <div class="signature-box">
+                <div class="signature-title">المورد</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">أمين الخزينة</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">مدير الحسابات</div>
+                <div class="signature-line"></div>
+            </div>
+        `;
+
+        printWindow.document.write(getReportPrintTemplate('سند دفع مورد', `مستند رقم ${payment.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml));
+        printWindow.document.close();
+    };
 
     const filteredPayments = useMemo(() => {
         return supplierPayments.filter(p => {
@@ -420,6 +465,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
                                             <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.createdBy || '-'}</td>
                                             <td className="p-3">
                                                 <div className="flex justify-center gap-2">
+                                                    <button onClick={() => handlePrint(p)} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="طباعة"><PrintIcon /></button>
                                                     <button onClick={() => handleEdit(p, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
                                                     <button onClick={() => handleEdit(p, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
                                                     <button onClick={() => {

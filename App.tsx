@@ -64,7 +64,7 @@ import SupplierPaymentRegister from './components/SupplierPaymentRegister';
 import ChequeCalendar from './components/ChequeCalendar';
 import { menuItems, ALL_PERMISSIONS } from './components/navigation';
 import { initFirebase, writeToDb, subscribeToDb } from './services/firebase';
-import { initDB, getTableData, saveTableData, saveSingleRow, resetDB } from './services/db';
+import { initDB, getTableData, saveTableData, saveSingleRow, resetDB, getTableMetadata } from './services/db';
 import { initLicense, LicenseStatus } from './services/license';
 import { checkGitHubUpdate } from './services/githubUpdate';
 import { APP_VERSION } from './constants/version';
@@ -120,6 +120,9 @@ const App: React.FC = () => {
   const [downloadUrl, setDownloadUrl] = useState<string>('');
   const [releaseNotes, setReleaseNotes] = useState<string>('');
   
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+
   const useSyncedState = <T,>(tableName: string, initialValue: T, customDbId?: string): [T, React.Dispatch<React.SetStateAction<T>>] => {
     const [storedValue, setStoredValue] = useState<T>(initialValue);
     const isRemoteUpdate = useRef(false);
@@ -175,19 +178,35 @@ const App: React.FC = () => {
     useEffect(() => {
         hasSyncedWithCloud.current = false;
         if (!isCloudConnected || !isDBReady) return;
-        const unsubscribe = subscribeToDb(effectiveDbId, tableName, (data) => {
+        
+        const unsubscribe = subscribeToDb(effectiveDbId, tableName, async (cloudData, cloudTimestamp) => {
             const isFirstSync = !hasSyncedWithCloud.current;
             hasSyncedWithCloud.current = true; 
-            if (data !== null && data !== undefined) {
-                isRemoteUpdate.current = true;
-                setStoredValue(data);
-                if (Array.isArray(data)) saveTableData(tableName, data);
-                else saveSingleRow(tableName, data);
-                setTimeout(() => { isRemoteUpdate.current = false; }, 500);
+            
+            if (cloudData !== null && cloudData !== undefined) {
+                const localTimestamp = await getTableMetadata(tableName);
+                
+                // Only overwrite local if cloud is newer or it's the first sync and local is empty
+                if (cloudTimestamp > localTimestamp || isFirstSync) {
+                    isRemoteUpdate.current = true;
+                    setStoredValue(cloudData);
+                    if (Array.isArray(cloudData)) saveTableData(tableName, cloudData, false); // false = don't update local timestamp from cloud sync
+                    else saveSingleRow(tableName, cloudData, false);
+                    setTimeout(() => { isRemoteUpdate.current = false; }, 500);
+                } else if (localTimestamp > cloudTimestamp) {
+                    // Local is newer, push to cloud
+                    setIsSyncing(true);
+                    writeToDb(effectiveDbId, tableName, localValueRef.current).finally(() => setIsSyncing(false));
+                }
             } else if (isFirstSync) {
                  const localData = localValueRef.current;
                  const hasLocalData = Array.isArray(localData) ? localData.length > 0 : (localData && Object.keys(localData).length > 0 && JSON.stringify(localData) !== JSON.stringify(initialValue));
-                if (hasLocalData) writeToDb(effectiveDbId, tableName, localData);
+                if (hasLocalData) {
+                    setIsSyncing(true);
+                    writeToDb(effectiveDbId, tableName, localData)
+                        .then(() => setLastSyncTime(Date.now()))
+                        .finally(() => setIsSyncing(false));
+                }
             }
         });
         return () => unsubscribe();
@@ -206,10 +225,13 @@ const App: React.FC = () => {
                     broadcastChannel.current?.postMessage({ type: 'UPDATE', payload: storedValue });
                 }
                 if (isCloudConnected && !isRemote && hasSyncedWithCloud.current) {
-                    writeToDb(effectiveDbId, tableName, storedValue);
+                    setIsSyncing(true);
+                    writeToDb(effectiveDbId, tableName, storedValue)
+                        .then(() => setLastSyncTime(Date.now()))
+                        .finally(() => setIsSyncing(false));
                 }
             });
-        }, 300); // 300ms debounce
+        }, 500); // Increased debounce for stability
 
         return () => clearTimeout(timeoutId);
     }, [storedValue, tableName, isDBReady, isCloudConnected, effectiveDbId]);
@@ -521,7 +543,7 @@ const App: React.FC = () => {
       case 'itemManagement': return <ItemManagement items={items} setItems={setItems} units={units} warehouses={warehouses} showNotification={showNotification} currentUser={currentUser!} defaultValues={defaultValues} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} warehouseTransfers={warehouseTransfers} companyData={companyData} />;
       case 'treasuryManagement': return <TreasuryManagement treasuries={treasuries} setTreasuries={setTreasuries} showNotification={showNotification} salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} customerReceipts={customerReceipts} supplierPayments={supplierPayments} expenses={expenses} treasuryTransfers={treasuryTransfers} currentUser={currentUser!} defaultValues={defaultValues} employees={employees} />;
       case 'expenseCategoryManagement': return <ExpenseCategoryManagement expenseCategories={expenseCategories} setExpenseCategories={setExpenseCategories} showNotification={showNotification} currentUser={currentUser!} />;
-      case 'expenseManagement': return <ExpenseManagement expenses={expenses} setExpenses={setExpenses} expenseCategories={expenseCategories} treasuries={treasuries} showNotification={showNotification} currentUser={currentUser!} defaultValues={defaultValues} customerReceipts={customerReceipts} supplierPayments={supplierPayments} treasuryTransfers={treasuryTransfers} salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} draft={expenseDraft} setDraft={setExpenseDraft} isEditing={expenseIsEditing} setIsEditing={setExpenseIsEditing} />;
+      case 'expenseManagement': return <ExpenseManagement expenses={expenses} setExpenses={setExpenses} expenseCategories={expenseCategories} treasuries={treasuries} showNotification={showNotification} currentUser={currentUser!} defaultValues={defaultValues} customerReceipts={customerReceipts} supplierPayments={supplierPayments} treasuryTransfers={treasuryTransfers} salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} draft={expenseDraft} setDraft={setExpenseDraft} isEditing={expenseIsEditing} setIsEditing={setExpenseIsEditing} companyData={companyData} />;
       case 'customerManagement': return <CustomerManagement customers={customers} setCustomers={setCustomers} showNotification={showNotification} currentUser={currentUser!} salesInvoices={salesInvoices} salesReturns={salesReturns} customerReceipts={customerReceipts} />;
       case 'customerReceipt': return <CustomerReceiptManagement customerReceipts={customerReceipts} setCustomerReceipts={setCustomerReceipts} customers={customers} treasuries={treasuries} showNotification={showNotification} docToView={docToView} onClearDocToView={() => setDocToView(null)} currentUser={currentUser!} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} defaultValues={defaultValues} companyData={companyData} supplierPayments={supplierPayments} expenses={expenses} treasuryTransfers={treasuryTransfers} draft={customerReceiptDraft} setDraft={setCustomerReceiptDraft} isEditing={customerReceiptIsEditing} setIsEditing={setCustomerReceiptIsEditing} />;
       case 'salesRepresentativeManagement': return <SalesRepresentativeManagement salesRepresentatives={salesRepresentatives} setSalesRepresentatives={setSalesRepresentatives} showNotification={showNotification} currentUser={currentUser!} salesInvoices={salesInvoices} salesReturns={salesReturns} employees={employees} />;
@@ -532,7 +554,7 @@ const App: React.FC = () => {
       case 'purchaseInvoice': return <PurchaseInvoiceManagement purchaseInvoices={purchaseInvoices} setPurchaseInvoices={setPurchaseInvoices} heldPurchaseInvoices={heldPurchaseInvoices} setHeldPurchaseInvoices={setHeldPurchaseInvoices} purchaseReturns={purchaseReturns} supplierPayments={supplierPayments} setSupplierPayments={setSupplierPayments} items={items} setItems={setItems} suppliers={suppliers} setSuppliers={setSuppliers} warehouses={warehouses} units={units} companyData={companyData} showNotification={showNotification} docToView={docToView} onClearDocToView={() => setDocToView(null)} currentUser={currentUser!} defaultValues={defaultValues} draft={purchaseInvoiceDraft} setDraft={setPurchaseInvoiceDraft} isEditing={purchaseInvoiceIsEditing} setIsEditing={setPurchaseInvoiceIsEditing} salesInvoices={salesInvoices} salesReturns={salesReturns} expenses={expenses} customerReceipts={customerReceipts} treasuryTransfers={treasuryTransfers} treasuries={treasuries} />;
       case 'purchaseReturn': return <PurchaseReturnManagement purchaseReturns={purchaseReturns} setPurchaseReturns={setPurchaseReturns} purchaseInvoices={purchaseInvoices} supplierPayments={supplierPayments} items={items} setItems={setItems} suppliers={suppliers} warehouses={warehouses} units={units} companyData={companyData} showNotification={showNotification} docToView={docToView} onClearDocToView={() => setDocToView(null)} currentUser={currentUser!} defaultValues={defaultValues} draft={purchaseReturnDraft} setDraft={setPurchaseReturnDraft} isEditing={purchaseReturnIsEditing} setIsEditing={setPurchaseReturnIsEditing} salesInvoices={salesInvoices} salesReturns={salesReturns} customerReceipts={customerReceipts} setCustomerReceipts={setCustomerReceipts} expenses={expenses} treasuryTransfers={treasuryTransfers} treasuries={treasuries} />;
       case 'warehouseTransfer': return <WarehouseTransferManagement warehouseTransfers={warehouseTransfers} setWarehouseTransfers={setWarehouseTransfers} items={items} setItems={setItems} warehouses={warehouses} units={units} showNotification={showNotification} currentUser={currentUser!} draft={warehouseTransferDraft} setDraft={setWarehouseTransferDraft} isEditing={warehouseTransferIsEditing} setIsEditing={setWarehouseTransferIsEditing} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} defaultValues={defaultValues} />;
-      case 'treasuryTransfer': return <TreasuryTransferManagement treasuryTransfers={treasuryTransfers} setTreasuryTransfers={setTreasuryTransfers} treasuries={treasuries} showNotification={showNotification} currentUser={currentUser!} customerReceipts={customerReceipts} supplierPayments={supplierPayments} expenses={expenses} salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} defaultValues={defaultValues} draft={treasuryTransferDraft} setDraft={setTreasuryTransferDraft} isEditing={treasuryTransferIsEditing} setIsEditing={setTreasuryTransferIsEditing} />;
+      case 'treasuryTransfer': return <TreasuryTransferManagement treasuryTransfers={treasuryTransfers} setTreasuryTransfers={setTreasuryTransfers} treasuries={treasuries} showNotification={showNotification} currentUser={currentUser!} customerReceipts={customerReceipts} supplierPayments={supplierPayments} expenses={expenses} salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} defaultValues={defaultValues} draft={treasuryTransferDraft} setDraft={setTreasuryTransferDraft} isEditing={treasuryTransferIsEditing} setIsEditing={setTreasuryTransferIsEditing} companyData={companyData} />;
       case 'chequeCalendar': return <ChequeCalendar customerReceipts={customerReceipts} supplierPayments={supplierPayments} customers={customers} suppliers={suppliers} />;
       case 'importCostCalculator': return <ImportCostCalculator companyData={companyData} items={items} setItems={setItems} units={units} warehouses={warehouses} defaultValues={defaultValues} showNotification={showNotification} purchaseInvoices={purchaseInvoices} setPurchaseInvoices={setPurchaseInvoices} suppliers={suppliers} setSuppliers={setSuppliers} currentUser={currentUser!} savedMessages={importCalculatorHistory} setSavedMessages={setImportCalculatorHistory} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} />;
       case 'warehouseInventory': return <WarehouseInventory items={items} setItems={setItems} warehouses={warehouses} companyData={companyData} users={users} showNotification={showNotification} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} />;
@@ -674,7 +696,7 @@ const App: React.FC = () => {
             </div>
         )}
         <div className="print:hidden">
-            <TopNav onNavigate={(view) => { if(view === 'settingsActivation') setShowManualActivation(true); else setCurrentView(view); }} currentUser={currentUser} licenseStatus={licenseStatus} user={currentUser.fullName} onLogout={handleLogout} theme={theme} onThemeChange={setTheme} currentViewLabel={currentViewLabel} isCloudConnected={isCloudConnected} updateAvailable={updateAvailable} firebaseConfig={firebaseConfig} isDBReady={isDBReady} />
+            <TopNav onNavigate={(view) => { if(view === 'settingsActivation') setShowManualActivation(true); else setCurrentView(view); }} currentUser={currentUser} licenseStatus={licenseStatus} user={currentUser.fullName} onLogout={handleLogout} theme={theme} onThemeChange={setTheme} currentViewLabel={currentViewLabel} isCloudConnected={isCloudConnected} isSyncing={isSyncing} lastSyncTime={lastSyncTime} updateAvailable={updateAvailable} firebaseConfig={firebaseConfig} isDBReady={isDBReady} />
         </div>
         <main className="flex-1 p-6 overflow-y-auto print:overflow-visible print:p-0">
             {notification && <ActionFeedback type={notification} />} 
