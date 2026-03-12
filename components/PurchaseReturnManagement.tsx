@@ -548,6 +548,42 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
         exportToExcel(dataToExport, 'مرتجعات_المشتريات');
     };
 
+    const exportSingleReturn = (ret: PurchaseReturn) => {
+        const supplier = suppliers.find(s => s.id === ret.supplierId);
+        const retTotal = (ret.items.reduce((acc, i) => acc + i.price * i.quantity, 0) - ret.discount) * (1 + ret.tax / 100);
+        
+        const data = ret.items.map(item => {
+            const itemData = items.find(i => i.id === item.itemId);
+            const warehouse = warehouses.find(w => w.id === (item.warehouseId !== undefined ? item.warehouseId : ret.warehouseId));
+            return {
+                'رقم المرتجع': ret.id,
+                'التاريخ': ret.date,
+                'المورد': supplier?.name || 'غير معروف',
+                'الباركود': itemData?.barcode || '',
+                'الصنف': itemData?.name || 'غير معروف',
+                'المخزن': warehouse?.name || 'غير معروف',
+                'الكمية': item.quantity,
+                'السعر': item.price,
+                'الإجمالي': item.price * item.quantity
+            };
+        });
+
+        // Add total row
+        data.push({
+            'رقم المرتجع': '',
+            'التاريخ': '',
+            'المورد': '',
+            'الباركود': '',
+            'الصنف': 'إجمالي قيمة المرتجع',
+            'المخزن': '',
+            'الكمية': 0,
+            'السعر': 0,
+            'الإجمالي': retTotal
+        });
+
+        exportToExcel(data, `مرتجع_مشتريات_${ret.id}`);
+    };
+
     const modalInvoicesToSelect = useMemo(() => {
         return purchaseInvoices
             .filter(inv => {
@@ -945,6 +981,7 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                                         <th className="p-3 border-b-2 text-sm font-bold">المورد</th>
                                         <th className="p-3 border-b-2 text-sm font-bold">نوع المرتجع</th>
                                         <th className="p-3 border-b-2 text-sm font-bold">المبلغ</th>
+                                        <th className="p-3 border-b-2 text-sm font-bold text-center">تصدير</th>
                                         <th className="p-3 border-b-2 text-sm font-bold text-center">إجراءات</th>
                                     </tr>
                                 </thead>
@@ -964,6 +1001,7 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                                                     </span>
                                                 </td>
                                                 <td className="p-3 font-black dark:text-white"><FormattedNumber value={retTotal} /></td>
+                                                <td className="p-3 text-center"><button onClick={() => exportSingleReturn(ret)} className="p-1 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تصدير إكسيل"><DownloadIcon className="w-5 h-5"/></button></td>
                                                 <td className="p-3">
                                                     <div className="flex justify-center gap-2">
                                                         <button onClick={() => handleEdit(ret)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>

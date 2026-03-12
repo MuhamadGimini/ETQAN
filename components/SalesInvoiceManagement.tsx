@@ -637,6 +637,43 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
         exportToExcel(dataToExport, 'فواتير_المبيعات');
     };
 
+    const exportSingleInvoice = (inv: SalesInvoice) => {
+        const customer = customers.find(c => c.id === inv.customerId);
+        const itemsTotal = inv.items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+        const netTotal = (itemsTotal - inv.discount) * (1 + inv.tax / 100);
+        
+        const data = inv.items.map(item => {
+            const itemData = items.find(i => i.id === item.itemId);
+            const warehouse = warehouses.find(w => w.id === (item.warehouseId !== undefined ? item.warehouseId : inv.warehouseId));
+            return {
+                'رقم الفاتورة': inv.id,
+                'التاريخ': inv.date,
+                'العميل': customer?.name || 'غير معروف',
+                'الباركود': itemData?.barcode || '',
+                'الصنف': itemData?.name || 'غير معروف',
+                'المخزن': warehouse?.name || 'غير معروف',
+                'الكمية': item.quantity,
+                'السعر': item.price,
+                'الإجمالي': item.price * item.quantity
+            };
+        });
+
+        // Add total row
+        data.push({
+            'رقم الفاتورة': '',
+            'التاريخ': '',
+            'العميل': '',
+            'الباركود': '',
+            'الصنف': 'إجمالي قيمة الفاتورة',
+            'المخزن': '',
+            'الكمية': 0,
+            'السعر': 0,
+            'الإجمالي': netTotal
+        });
+
+        exportToExcel(data, `فاتورة_${inv.id}`);
+    };
+
     const cardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-6 border border-white/40 dark:bg-gray-700/30 dark:border-white/20";
     const compactCardClass = "bg-white/30 backdrop-blur-lg rounded-xl shadow-md p-4 border border-white/40 dark:bg-gray-700/30 dark:border-white/20 w-full"; 
     const inputClass = "h-11 w-full px-4 py-2 bg-white dark:bg-gray-800 border-2 border-green-300 dark:border-green-700 rounded-lg focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 text-black dark:text-white font-bold placeholder-gray-500 transition duration-300 disabled:opacity-70 text-base font-bold";
@@ -988,7 +1025,7 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                             <table className="w-full text-right border-collapse">
                                 <thead className="sticky top-0 z-20 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                     <tr className="shadow-sm">
-                                        <th className="p-3 border-b-2 text-sm font-bold">رقم الفاتورة</th><th className="p-3 border-b-2 text-sm font-bold">رقم الإذن</th><th className="p-3 border-b-2 text-sm font-bold">التاريخ</th><th className="p-3 border-b-2 text-sm font-bold">العميل</th><th className="p-3 border-b-2 text-sm font-bold">المندوب</th><th className="p-3 border-b-2 text-sm font-bold">نوع الفاتورة</th><th className="p-3 border-b-2 text-sm font-bold">المبلغ</th><th className="p-3 border-b-2 text-sm font-bold text-center">إجراءات</th>
+                                        <th className="p-3 border-b-2 text-sm font-bold">رقم الفاتورة</th><th className="p-3 border-b-2 text-sm font-bold">رقم الإذن</th><th className="p-3 border-b-2 text-sm font-bold">التاريخ</th><th className="p-3 border-b-2 text-sm font-bold">العميل</th><th className="p-3 border-b-2 text-sm font-bold">المندوب</th><th className="p-3 border-b-2 text-sm font-bold">نوع الفاتورة</th><th className="p-3 border-b-2 text-sm font-bold">المبلغ</th><th className="p-3 border-b-2 text-sm font-bold text-center">تصدير</th><th className="p-3 border-b-2 text-sm font-bold text-center">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -997,17 +1034,24 @@ const SalesInvoiceManagement: React.FC<SalesInvoiceManagementProps> = React.memo
                                         const itemsTotal = inv.items.reduce((s,i)=>s+i.price*i.quantity,0);
                                         const invTotal = (itemsTotal - inv.discount) * (1 + inv.tax / 100);
                                         return (
-                                            <tr key={inv.id} className="border-b hover:bg-green-50 transition-colors dark:hover:bg-green-900/10 text-sm font-bold">
+                                    <tr key={inv.id} className="border-b hover:bg-green-50 transition-colors dark:hover:bg-green-900/10 text-sm font-bold">
                                                 <td className="p-3 text-green-700 dark:text-green-400">{inv.id}</td><td className="p-3 text-gray-600 dark:text-gray-400 font-mono">{inv.permissionNumber || '-'}</td><td className="p-3 text-gray-700 dark:text-gray-300">{formatDateForDisplay(inv.date)}</td><td className="p-3 text-gray-800 dark:text-gray-200">{customers.find(c=>c.id===inv.customerId)?.name || 'غير معروف'}</td><td className="p-3 text-gray-700 dark:text-gray-300">{salesRep?.name || '-'}</td>
                                                 <td className="p-3"><span className={`px-2 py-1 rounded text-xs font-black ${inv.type === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{inv.type === 'cash' ? 'نقدي' : 'آجل'}</span></td>
                                                 <td className="p-3 font-black text-gray-900 dark:text-white"><FormattedNumber value={invTotal} /></td>
-                                                <td className="p-3"><div className="flex justify-center gap-2"><button onClick={() => handleEdit(inv)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button><button onClick={() => handlePrint(inv)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="طباعة"><PrintIcon /></button><button onClick={() => {
-                                                    const customer = customers.find(c => c.id === inv.customerId);
-                                                    const phoneNumber = formatPhoneNumberForWhatsApp(customer?.phone || '');
-                                                    const invTotal = (inv.items.reduce((s, i) => s + i.price * i.quantity, 0) - inv.discount) * (1 + inv.tax / 100);
-                                                    const text = `فاتورة مبيعات رقم: ${inv.id}%0Aالتاريخ: ${formatDateForDisplay(inv.date)}%0Aالعميل: ${customer?.name || ''}%0Aالإجمالي: ${formatNumber(invTotal)}${defaultValues.whatsappFooter ? '%0A' + encodeURIComponent(defaultValues.whatsappFooter) : ''}`;
-                                                    window.open(phoneNumber ? `https://wa.me/${phoneNumber}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
-                                                }} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="واتساب"><WhatsAppIcon /></button>{canDelete && <button onClick={() => {setInvoiceToDelete(inv); setIsDeleteModalOpen(true);}} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}</div></td>
+                                                <td className="p-3 text-center"><button onClick={() => exportSingleInvoice(inv)} className="p-1 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="تصدير إكسيل"><DownloadIcon className="w-5 h-5"/></button></td>
+                                                <td className="p-3">
+                                                    <div className="flex justify-center gap-1">
+                                                        <button onClick={() => handleEdit(inv)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
+                                                        <button onClick={() => handlePrint(inv)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="طباعة"><PrintIcon /></button>
+                                                        <button onClick={() => {
+                                                            const customer = customers.find(c => c.id === inv.customerId);
+                                                            const phoneNumber = formatPhoneNumberForWhatsApp(customer?.phone || '');
+                                                            const invTotal = (inv.items.reduce((s, i) => s + i.price * i.quantity, 0) - inv.discount) * (1 + inv.tax / 100);
+                                                            const text = `فاتورة مبيعات رقم: ${inv.id}%0Aالتاريخ: ${formatDateForDisplay(inv.date)}%0Aالعميل: ${customer?.name || ''}%0Aالإجمالي: ${formatNumber(invTotal)}${defaultValues.whatsappFooter ? '%0A' + encodeURIComponent(defaultValues.whatsappFooter) : ''}`;
+                                                            window.open(phoneNumber ? `https://wa.me/${phoneNumber}?text=${text}` : `https://wa.me/?text=${text}`, '_blank');
+                                                        }} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="واتساب"><WhatsAppIcon /></button>{canDelete && <button onClick={() => {setInvoiceToDelete(inv); setIsDeleteModalOpen(true);}} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         );
                                     })}
