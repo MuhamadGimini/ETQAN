@@ -233,7 +233,7 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('سند صرف مصروفات', `مستند رقم ${expense.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml));
+        printWindow.document.write(getReportPrintTemplate('سند صرف مصروفات', `مستند رقم ${expense.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml, 'A5 landscape'));
         printWindow.document.close();
     };
     

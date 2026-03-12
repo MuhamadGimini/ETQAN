@@ -393,7 +393,7 @@ const ItemsInWarehouses: React.FC<ItemsInWarehousesProps> = ({
                 <title>تقرير الأصناف بالمخازن</title>
                 <script src="https://cdn.tailwindcss.com"></script>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>body { font-family: 'Cairo', sans-serif; direction: rtl; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: black !important; font-size: 8pt; } h1, h2 { font-size: 12pt; } @page { size: landscape; margin: 0.5cm; }</style>
+                <style>body { font-family: 'Cairo', sans-serif; direction: rtl; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: black !important; font-size: 8pt; } h1, h2 { font-size: 12pt; } @page { size: A4 landscape; margin: 0.5cm; }</style>
             </head>
             <body class="p-4" onload="window.print(); window.close();">
                 <div class="text-center mb-4 border-b-2 border-black pb-2">

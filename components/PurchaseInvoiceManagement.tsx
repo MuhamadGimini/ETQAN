@@ -374,7 +374,7 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('فاتورة مشتريات', `مستند رقم ${inv.id}`, companyData, headers, rowsHtml, summaryHtml, secondarySummaryHtml, signaturesHtml));
+        printWindow.document.write(getReportPrintTemplate('فاتورة مشتريات', `مستند رقم ${inv.id}`, companyData, headers, rowsHtml, summaryHtml, secondarySummaryHtml, signaturesHtml, 'A5 landscape'));
         printWindow.document.close();
     };
 

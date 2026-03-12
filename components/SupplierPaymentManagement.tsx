@@ -253,7 +253,7 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('سند دفع مورد', `مستند رقم ${payment.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml));
+        printWindow.document.write(getReportPrintTemplate('سند دفع مورد', `مستند رقم ${payment.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml, 'A5 landscape'));
         printWindow.document.close();
     };
 

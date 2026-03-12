@@ -1,5 +1,5 @@
 {
-  "name": "POS Management System v1.2.9",
+  "name": "POS Management System v1.3.2",
   "description": "A comprehensive Point of Sale (POS) management system for handling sales, purchases, inventory, customers, suppliers, and company settings. All data is stored locally in the browser.",
   "requestFramePermissions": [
     "microphone"
