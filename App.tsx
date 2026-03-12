@@ -64,7 +64,7 @@ import SupplierPaymentRegister from './components/SupplierPaymentRegister';
 import ChequeCalendar from './components/ChequeCalendar';
 import { menuItems, ALL_PERMISSIONS } from './components/navigation';
 import { initFirebase, writeToDb, subscribeToDb } from './services/firebase';
-import { initDB, getTableData, saveTableData, saveSingleRow, resetDB, getTableMetadata } from './services/db';
+import { initDB, getTableData, saveTableData, saveSingleRow, resetDB, getTableMetadata, updateTableMetadata } from './services/db';
 import { initLicense, LicenseStatus } from './services/license';
 import { checkGitHubUpdate } from './services/githubUpdate';
 import { APP_VERSION } from './constants/version';
@@ -180,27 +180,43 @@ const App: React.FC = () => {
         if (!isCloudConnected || !isDBReady) return;
         
         const unsubscribe = subscribeToDb(effectiveDbId, tableName, async (cloudData, cloudTimestamp) => {
-            const isFirstSync = !hasSyncedWithCloud.current;
-            hasSyncedWithCloud.current = true; 
+            if (!hasSyncedWithCloud.current) {
+                hasSyncedWithCloud.current = true;
+            }
+            
+            const localTimestamp = await getTableMetadata(tableName);
             
             if (cloudData !== null && cloudData !== undefined) {
-                const localTimestamp = await getTableMetadata(tableName);
-                
-                // Only overwrite local if cloud is newer or it's the first sync and local is empty
-                if (cloudTimestamp > localTimestamp || isFirstSync) {
+                // Overwrite local if cloud is newer OR if local is empty (new user)
+                const isLocalEmpty = await getTableData(tableName).then(data => 
+                    Array.isArray(data) ? data.length === 0 : !data
+                );
+
+                if (cloudTimestamp > localTimestamp || isLocalEmpty) {
+                    console.log(`☁️ [Cloud Sync] Updating local ${tableName} from cloud...`);
                     isRemoteUpdate.current = true;
                     setStoredValue(cloudData);
-                    if (Array.isArray(cloudData)) saveTableData(tableName, cloudData, false); // false = don't update local timestamp from cloud sync
-                    else saveSingleRow(tableName, cloudData, false);
-                    setTimeout(() => { isRemoteUpdate.current = false; }, 500);
+                    
+                    if (Array.isArray(cloudData)) {
+                        await saveTableData(tableName, cloudData, false);
+                    } else {
+                        await saveSingleRow(tableName, cloudData, false);
+                    }
+                    
+                    // Update local metadata timestamp to match cloud to prevent loop
+                    await updateTableMetadata(tableName, cloudTimestamp);
+                    
+                    setTimeout(() => { isRemoteUpdate.current = false; }, 2000); // Increased timeout for stability
                 } else if (localTimestamp > cloudTimestamp) {
                     // Local is newer, push to cloud
                     setIsSyncing(true);
                     writeToDb(effectiveDbId, tableName, localValueRef.current).finally(() => setIsSyncing(false));
                 }
-            } else if (isFirstSync) {
-                 const localData = localValueRef.current;
-                 const hasLocalData = Array.isArray(localData) ? localData.length > 0 : (localData && Object.keys(localData).length > 0 && JSON.stringify(localData) !== JSON.stringify(initialValue));
+            } else {
+                // Cloud is empty, if local has data, push it
+                const localData = localValueRef.current;
+                const hasLocalData = Array.isArray(localData) ? localData.length > 0 : (localData && Object.keys(localData).length > 0 && JSON.stringify(localData) !== JSON.stringify(initialValue));
+                
                 if (hasLocalData) {
                     setIsSyncing(true);
                     writeToDb(effectiveDbId, tableName, localData)

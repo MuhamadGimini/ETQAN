@@ -68,21 +68,28 @@ export const initFirebase = (config: FirebaseConfig, onConnectionStatusChange: (
 };
 
 
-export const writeToDb = (dbId: string, key: string, data: any) => {
+export const writeToDb = async (dbId: string, key: string, data: any) => {
   if (!db) return;
-  // Note: dbId CAN be empty string now (for root access), so we only check key
   if (!key) {
       console.warn("Firebase Write SKIPPED: Missing key", { dbId, key });
       return;
   }
   
   const path = getPath(dbId, key);
+  const timestampPath = getPath(dbId, `metadata/${key}/lastUpdated`);
+  const timestamp = Date.now();
+
   console.log(`🔥 [Firebase SYNC] Attempting WRITE to: ${path}`);
   
-  const dbRef = ref(db, path);
-  set(dbRef, data)
-    .then(() => console.log(`✅ [Firebase SYNC] Data successfully WRITTEN to: ${path}`))
-    .catch(err => {
+  try {
+      const dbRef = ref(db, path);
+      const tsRef = ref(db, timestampPath);
+      
+      await set(dbRef, data);
+      await set(tsRef, timestamp);
+      
+      console.log(`✅ [Firebase SYNC] Data and Timestamp successfully WRITTEN to: ${path}`);
+  } catch (err) {
       console.error("❌ Firebase Write Error:", err);
       if ((err as any).code === 'PERMISSION_DENIED') {
           alert(
@@ -90,10 +97,10 @@ export const writeToDb = (dbId: string, key: string, data: any) => {
               'تأكد من قواعد قاعدة البيانات (Rules) في Firebase.'
           );
       }
-  });
+  }
 };
 
-export const subscribeToDb = (dbId: string, key: string, callback: (data: any) => void) => {
+export const subscribeToDb = (dbId: string, key: string, callback: (data: any, timestamp: number) => void) => {
   if (!db) {
       console.warn("Firebase DB not initialized, skipping subscription");
       return () => {};
@@ -104,21 +111,43 @@ export const subscribeToDb = (dbId: string, key: string, callback: (data: any) =
   }
 
   const path = getPath(dbId, key);
-  console.log(`👂 [Firebase SYNC] Subscribing to: ${path}`);
+  const timestampPath = getPath(dbId, `metadata/${key}/lastUpdated`);
+  
+  console.log(`👂 [Firebase SYNC] Subscribing to: ${path} and ${timestampPath}`);
   
   const dbRef = ref(db, path);
+  const tsRef = ref(db, timestampPath);
   
-  const unsubscribe = onValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
-    const status = data === null ? 'NULL (Empty)' : 'Data Found';
-    console.log(`📥 [Firebase SYNC] Data RECEIVED for ${path}: ${status}`);
-    callback(data);
+  let currentData: any = null;
+  let currentTimestamp: number = 0;
+  let dataReceived = false;
+  let tsReceived = false;
+
+  const handleUpdate = () => {
+      if (dataReceived && tsReceived) {
+          callback(currentData, currentTimestamp);
+      }
+  };
+
+  const unsubscribeData = onValue(dbRef, (snapshot) => {
+    currentData = snapshot.val();
+    dataReceived = true;
+    handleUpdate();
   }, (error) => {
-    console.error(`❌ [Firebase SYNC] Subscription error for ${path}:`, error);
+    console.error(`❌ [Firebase SYNC] Data subscription error for ${path}:`, error);
+  });
+
+  const unsubscribeTs = onValue(tsRef, (snapshot) => {
+    currentTimestamp = snapshot.val() || 0;
+    tsReceived = true;
+    handleUpdate();
+  }, (error) => {
+    console.error(`❌ [Firebase SYNC] Timestamp subscription error for ${timestampPath}:`, error);
   });
 
   return () => {
       console.log(`👋 [Firebase SYNC] Unsubscribing from: ${path}`);
       off(dbRef);
+      off(tsRef);
   };
 };
