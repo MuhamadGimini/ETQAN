@@ -36,10 +36,31 @@ export const getReportPrintTemplate = (
                     background-color: white;
                 }
                 .report-header {
-                    text-align: center;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
                     margin-bottom: 20px;
                     border-bottom: 2px solid ${themeColor};
                     padding-bottom: 10px;
+                }
+                .header-logo {
+                    width: 30%;
+                    text-align: left;
+                }
+                .header-logo img {
+                    max-width: 120px;
+                    max-height: 80px;
+                    object-fit: contain;
+                }
+                .header-center {
+                    width: 40%;
+                    text-align: center;
+                }
+                .header-info {
+                    width: 30%;
+                    text-align: right;
+                    font-size: 9pt;
+                    font-weight: bold;
                 }
                 .report-header h1 {
                     font-size: 1.6rem;
@@ -133,10 +154,19 @@ export const getReportPrintTemplate = (
         </head>
         <body onload="window.print();window.close()">
             <div class="report-header">
-                <h1>${companyData.name}</h1>
-                <h2>${title}</h2>
-                <p>${subtitle}</p>
-                <p>تاريخ الطباعة: ${formatDateForDisplay(new Date().toISOString().split('T')[0])}</p>
+                <div class="header-info">
+                    <p>تاريخ الطباعة: ${formatDateForDisplay(new Date().toISOString().split('T')[0])}</p>
+                    ${companyData.tr ? `<div>رقم التسجيل: ${companyData.tr}</div>` : ''}
+                    ${companyData.cr ? `<div>سجل تجاري: ${companyData.cr}</div>` : ''}
+                </div>
+                <div class="header-center">
+                    <h1>${companyData.name}</h1>
+                    <h2>${title}</h2>
+                    <p>${subtitle}</p>
+                </div>
+                <div class="header-logo">
+                    ${companyData.logo ? `<img src="${companyData.logo}" />` : ''}
+                </div>
             </div>
             <table>
                 <thead>

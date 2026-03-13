@@ -54,9 +54,12 @@ export const menuItems = [
       { id: 'itemMovement', label: 'كشف حركة صنف', group: 'تقارير المخازن والأصناف' },
       { id: 'analysisReport', label: 'تحليل أداء الأصناف', group: 'تقارير المخازن والأصناف' },
       { id: 'itemsInWarehouses', label: 'الأصناف في المخازن', group: 'تقارير المخازن والأصناف' },
+      // Real-time Monitoring Group
+      { id: 'voucherRegister', label: 'سجل السندات العام', group: 'شاشات المتابعة اللحظية' },
+      { id: 'invoicesRegister', label: 'سجل الفواتير العام', group: 'شاشات المتابعة اللحظية' },
+      { id: 'itemsMovementRegister', label: 'سجل حركة الأصناف العام', group: 'شاشات المتابعة اللحظية' },
       // Treasury Reports Group
       { id: 'dailyLedger', label: 'تقرير النقدية اليومي', group: 'تقارير الخزينة والمصاريف' },
-      { id: 'voucherRegister', label: 'سجل السندات العام', group: 'تقارير الخزينة والمصاريف' },
       { id: 'customerReceiptRegister', label: 'سجل سندات القبض', group: 'تقارير الخزينة والمصاريف' },
       { id: 'supplierPaymentRegister', label: 'سجل سندات الدفع', group: 'تقارير الخزينة والمصاريف' },
       { id: 'expenseReport', label: 'تقرير المصروفات', group: 'تقارير الخزينة والمصاريف' },

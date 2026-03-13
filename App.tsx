@@ -59,6 +59,8 @@ import EmployeeManagement from './components/EmployeeManagement';
 import DepartmentManagement from './components/DepartmentManagement';
 import Chat from './components/Chat';
 import VoucherRegister from './components/VoucherRegister';
+import InvoicesRegister from './components/InvoicesRegister';
+import ItemsMovementRegister from './components/ItemsMovementRegister';
 import CustomerReceiptRegister from './components/CustomerReceiptRegister';
 import SupplierPaymentRegister from './components/SupplierPaymentRegister';
 import ChequeCalendar from './components/ChequeCalendar';
@@ -567,6 +569,8 @@ const App: React.FC = () => {
       case 'itemMovement': return <ItemMovement items={items} warehouses={warehouses} salesInvoices={salesInvoices} salesReturns={salesReturns} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} warehouseTransfers={warehouseTransfers} companyData={companyData} onViewDoc={(view, id) => { setDocToView({ view, docId: id }); setCurrentView(view); }} defaultValues={defaultValues} customers={customers} suppliers={suppliers} />;
       case 'dailyLedger': return <DailyLedger salesInvoices={salesInvoices} salesReturns={salesReturns} expenses={expenses} purchaseInvoices={purchaseInvoices} purchaseReturns={purchaseReturns} customerReceipts={customerReceipts} supplierPayments={supplierPayments} treasuryTransfers={treasuryTransfers} expenseCategories={expenseCategories} treasuries={treasuries} defaultValues={defaultValues} companyData={companyData} />;
       case 'voucherRegister': return <VoucherRegister customerReceipts={customerReceipts} supplierPayments={supplierPayments} expenses={expenses} treasuryTransfers={treasuryTransfers} customers={customers} suppliers={suppliers} expenseCategories={expenseCategories} treasuries={treasuries} />;
+      case 'invoicesRegister': return <InvoicesRegister salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} customers={customers} suppliers={suppliers} />;
+      case 'itemsMovementRegister': return <ItemsMovementRegister salesInvoices={salesInvoices} purchaseInvoices={purchaseInvoices} salesReturns={salesReturns} purchaseReturns={purchaseReturns} items={items} />;
       case 'customerReceiptRegister': return <CustomerReceiptRegister customerReceipts={customerReceipts} customers={customers} treasuries={treasuries} companyData={companyData} />;
       case 'supplierPaymentRegister': return <SupplierPaymentRegister supplierPayments={supplierPayments} suppliers={suppliers} treasuries={treasuries} companyData={companyData} />;
       case 'expenseReport': return <ExpenseReport expenses={expenses} expenseCategories={expenseCategories} treasuries={treasuries} companyData={companyData} defaultValues={defaultValues} />;

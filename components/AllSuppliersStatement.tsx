@@ -37,6 +37,7 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showZeroBalances, setShowZeroBalances] = useState(false); // Default: Hide zero balances
+    const [reportMode, setReportMode] = useState<'detailed' | 'summary'>('detailed');
 
     const supplierSummaries = useMemo<SupplierSummary[]>(() => {
         const summaries = suppliers.map(supplier => {
@@ -127,15 +128,23 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
     }, [filteredSummaries]);
 
     const handleExport = () => {
-        const data = filteredSummaries.map(s => ({
-            'اسم المورد': s.name,
-            'رصيد أول المدة': s.openingBalance,
-            'إجمالي المشتريات': s.totalPurchases,
-            'إجمالي المرتجعات': s.totalReturns,
-            'إجمالي المدفوعات': s.totalPayments,
-            'الرصيد النهائي': s.closingBalance
-        }));
-        exportToExcel(data, 'كشف_حسابات_الموردين');
+        const data = filteredSummaries.map(s => {
+            if (reportMode === 'summary') {
+                return {
+                    'اسم المورد': s.name,
+                    'الرصيد النهائي': s.closingBalance
+                };
+            }
+            return {
+                'اسم المورد': s.name,
+                'رصيد أول المدة': s.openingBalance,
+                'إجمالي المشتريات': s.totalPurchases,
+                'إجمالي المرتجعات': s.totalReturns,
+                'إجمالي المدفوعات': s.totalPayments,
+                'الرصيد النهائي': s.closingBalance
+            };
+        });
+        exportToExcel(data, `تقرير_ارصدة_الموردين_${reportMode === 'summary' ? 'مختصر' : 'مفصل'}`);
     };
 
     const handlePrint = () => {
@@ -157,26 +166,41 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
 
         const netBalance = totalPayables + totalReceivables;
 
-        const headers = ['م', 'اسم المورد', 'رصيد أول', 'مشتريات', 'مرتجع', 'مدفوعات', 'الرصيد النهائي'];
+        const headers = reportMode === 'summary' 
+            ? ['م', 'اسم المورد', 'الرصيد النهائي']
+            : ['م', 'اسم المورد', 'رصيد أول', 'مشتريات', 'مرتجع', 'مدفوعات', 'الرصيد النهائي'];
 
-        const rowsHtml = printableSummaries.map((summary, index) => `
-            <tr>
-                <td>${index + 1}</td>
-                <td class="text-right font-black">${summary.name}</td>
-                <td>${summary.openingBalance.toFixed(2)}</td>
-                <td class="text-red">${summary.totalPurchases.toFixed(2)}</td>
-                <td class="text-green">${summary.totalReturns.toFixed(2)}</td>
-                <td class="text-indigo">${summary.totalPayments.toFixed(2)}</td>
-                <td class="font-black ${summary.closingBalance > 0 ? 'text-red' : 'text-green'}">${summary.closingBalance.toFixed(2)}</td>
-            </tr>
-        `).join('');
+        const rowsHtml = printableSummaries.map((summary, index) => {
+            if (reportMode === 'summary') {
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="text-right font-black">${summary.name}</td>
+                        <td class="font-black ${summary.closingBalance > 0 ? 'text-red' : 'text-green'}">${summary.closingBalance.toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+            return `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="text-right font-black">${summary.name}</td>
+                    <td>${summary.openingBalance.toFixed(2)}</td>
+                    <td class="text-red">${summary.totalPurchases.toFixed(2)}</td>
+                    <td class="text-green">${summary.totalReturns.toFixed(2)}</td>
+                    <td class="text-indigo">${summary.totalPayments.toFixed(2)}</td>
+                    <td class="font-black ${summary.closingBalance > 0 ? 'text-red' : 'text-green'}">${summary.closingBalance.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
 
         const summaryHtml = `
             <div class="w-full mt-4">
                 <div class="summary-item"><span>عدد الموردين:</span><span>${printableSummaries.length}</span></div>
-                <div class="summary-item"><span>إجمالي المشتريات:</span><span class="text-red">${totals.totalPurchases.toFixed(2)}</span></div>
-                <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-green">${totals.totalReturns.toFixed(2)}</span></div>
-                <div class="summary-item"><span>إجمالي المدفوعات:</span><span class="text-indigo">${totals.totalPayments.toFixed(2)}</span></div>
+                ${reportMode === 'detailed' ? `
+                    <div class="summary-item"><span>إجمالي المشتريات:</span><span class="text-red">${totals.totalPurchases.toFixed(2)}</span></div>
+                    <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-green">${totals.totalReturns.toFixed(2)}</span></div>
+                    <div class="summary-item"><span>إجمالي المدفوعات:</span><span class="text-indigo">${totals.totalPayments.toFixed(2)}</span></div>
+                ` : ''}
                 <div class="summary-item font-black border-t border-gray-300 mt-2 pt-2">
                     <span>إجمالي الدائنية (لهم):</span><span class="text-red">${totalPayables.toFixed(2)}</span>
                 </div>
@@ -189,7 +213,7 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('تقرير أرصدة الموردين النهائية', '', companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#dc2626'));
+        printWindow.document.write(getReportPrintTemplate(`تقرير أرصدة الموردين (${reportMode === 'summary' ? 'مختصر' : 'مفصل'})`, '', companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#dc2626'));
         printWindow.document.close();
     };
 
@@ -203,7 +227,7 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
             
             <div className={cardClass}>
                 <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                    <div className="w-full md:w-1/2">
+                    <div className="w-full md:w-1/3">
                         <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2">بحث</label>
                         <input
                             type="text"
@@ -214,14 +238,31 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
                         />
                     </div>
                     <div className="w-full md:w-1/4">
+                        <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2">نوع الكشف</label>
+                        <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1">
+                            <button 
+                                onClick={() => setReportMode('detailed')}
+                                className={`flex-1 py-2 rounded-md font-bold transition-all ${reportMode === 'detailed' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            >
+                                مفصل
+                            </button>
+                            <button 
+                                onClick={() => setReportMode('summary')}
+                                className={`flex-1 py-2 rounded-md font-bold transition-all ${reportMode === 'summary' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            >
+                                مختصر
+                            </button>
+                        </div>
+                    </div>
+                    <div className="w-full md:w-1/4">
                         <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2">تصفية الأرصدة</label>
                         <select
                             value={showZeroBalances ? 'true' : 'false'}
                             onChange={(e) => setShowZeroBalances(e.target.value === 'true')}
                             className={inputClass}
                         >
-                            <option value="false">إخفاء الأرصدة الصفرية (طباعة الأرصدة الفعلية)</option>
-                            <option value="true">عرض كل الموردين (شامل الأرصدة الصفرية)</option>
+                            <option value="false">إخفاء الأرصدة الصفرية</option>
+                            <option value="true">عرض كل الموردين</option>
                         </select>
                     </div>
                     <div className="flex space-x-2 space-x-reverse">
@@ -272,17 +313,25 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
                     <table className="w-full text-right">
                         <thead className="sticky top-0 z-10">
                             <tr className="bg-gray-200 dark:bg-gray-800 border-b-2 border-gray-300 dark:border-gray-600">
-                                {['اسم المورد', 'رصيد أول المدة', 'إجمالي المشتريات', 'إجمالي المرتجعات', 'إجمالي المدفوعات', 'الرصيد النهائي', 'إجراءات'].map(h => <th key={h} className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">{h}</th>)}
+                                {reportMode === 'detailed' ? (
+                                    ['اسم المورد', 'رصيد أول المدة', 'إجمالي المشتريات', 'إجمالي المرتجعات', 'إجمالي المدفوعات', 'الرصيد النهائي', 'إجراءات'].map(h => <th key={h} className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">{h}</th>)
+                                ) : (
+                                    ['اسم المورد', 'الرصيد النهائي', 'إجراءات'].map(h => <th key={h} className="p-3 text-lg font-semibold text-gray-600 dark:text-gray-400">{h}</th>)
+                                )}
                             </tr>
                         </thead>
                         <tbody>
                             {filteredSummaries.map(summary => (
                                 <tr key={summary.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-white/20 dark:hover:bg-white/5">
                                     <td className="p-3 font-bold text-gray-800 dark:text-gray-200">{summary.name}</td>
-                                    <td className="p-3 text-gray-700 dark:text-gray-300"><FormattedNumber value={summary.openingBalance} /></td>
-                                    <td className="p-3 text-green-600 dark:text-green-400"><FormattedNumber value={summary.totalPurchases} /></td>
-                                    <td className="p-3 text-red-600 dark:text-red-400"><FormattedNumber value={summary.totalReturns} /></td>
-                                    <td className="p-3 text-blue-600 dark:text-blue-400"><FormattedNumber value={summary.totalPayments} /></td>
+                                    {reportMode === 'detailed' && (
+                                        <>
+                                            <td className="p-3 text-gray-700 dark:text-gray-300"><FormattedNumber value={summary.openingBalance} /></td>
+                                            <td className="p-3 text-red-600 dark:text-red-400"><FormattedNumber value={summary.totalPurchases} /></td>
+                                            <td className="p-3 text-green-600 dark:text-green-400"><FormattedNumber value={summary.totalReturns} /></td>
+                                            <td className="p-3 text-blue-600 dark:text-blue-400"><FormattedNumber value={summary.totalPayments} /></td>
+                                        </>
+                                    )}
                                     <td className={`p-3 font-bold ${
                                         summary.closingBalance > 0 ? 'text-red-700 dark:text-red-500' : 
                                         summary.closingBalance < 0 ? 'text-green-700 dark:text-green-500' :
@@ -303,10 +352,14 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
                         <tfoot className="sticky bottom-0 z-10 bg-gray-200 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-600">
                             <tr>
                                 <td className="p-3 font-bold text-gray-800 dark:text-gray-200">الإجمالي</td>
-                                <td className="p-3 font-bold text-gray-800 dark:text-gray-200"><FormattedNumber value={totals.openingBalance} /></td>
-                                <td className="p-3 font-bold text-green-700 dark:text-green-400"><FormattedNumber value={totals.totalPurchases} /></td>
-                                <td className="p-3 font-bold text-red-700 dark:text-red-400"><FormattedNumber value={totals.totalReturns} /></td>
-                                <td className="p-3 font-bold text-blue-700 dark:text-blue-400"><FormattedNumber value={totals.totalPayments} /></td>
+                                {reportMode === 'detailed' && (
+                                    <>
+                                        <td className="p-3 font-bold text-gray-800 dark:text-gray-200"><FormattedNumber value={totals.openingBalance} /></td>
+                                        <td className="p-3 font-bold text-red-700 dark:text-red-400"><FormattedNumber value={totals.totalPurchases} /></td>
+                                        <td className="p-3 font-bold text-green-700 dark:text-green-400"><FormattedNumber value={totals.totalReturns} /></td>
+                                        <td className="p-3 font-bold text-blue-700 dark:text-blue-400"><FormattedNumber value={totals.totalPayments} /></td>
+                                    </>
+                                )}
                                 <td className={`p-3 font-bold ${totals.closingBalance > 0 ? 'text-red-700 dark:text-red-500' : totals.closingBalance < 0 ? 'text-green-700 dark:text-green-500' : 'text-gray-800 dark:text-gray-200'}`}>
                                     <FormattedNumber value={Math.abs(totals.closingBalance)} />
                                     {totals.closingBalance > 0 ? ' (له)' : totals.closingBalance < 0 ? ' (عليه)' : ''}
