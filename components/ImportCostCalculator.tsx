@@ -562,7 +562,10 @@ const ImportCostCalculator: React.FC<ImportCostCalculatorProps> = ({
       headers, 
       finalRowsHtml,
       summaryHtml,
-      secondarySummaryHtml
+      secondarySummaryHtml,
+      undefined,
+      'A4',
+      '#dc2626'
     ));
     printWindow.document.close();
   };

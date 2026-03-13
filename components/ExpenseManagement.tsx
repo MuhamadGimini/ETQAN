@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import type { Expense, ExpenseCategory, Treasury, NotificationType, MgmtUser, DefaultValues, CustomerReceipt, SupplierPayment, TreasuryTransfer, SalesInvoice, PurchaseInvoice, SalesReturn, PurchaseReturn } from '../types';
-import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon } from './Shared';
+import type { Expense, ExpenseCategory, Treasury, NotificationType, MgmtUser, DefaultValues, CustomerReceipt, SupplierPayment, TreasuryTransfer, SalesInvoice, PurchaseInvoice, SalesReturn, PurchaseReturn, CompanyData } from '../types';
+import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, ChevronDownIcon, PrintIcon } from './Shared';
 import { useDateInput } from '../hooks/useDateInput';
-import { searchMatch } from '../utils';
+import { searchMatch, formatDateForDisplay } from '../utils';
+import { getVoucherPrintTemplate } from '../utils/printing';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
 
@@ -26,12 +27,13 @@ interface ExpenseManagementProps {
     setDraft: React.Dispatch<React.SetStateAction<any>>;
     isEditing: boolean;
     setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
+    companyData: CompanyData;
 }
 
 const ExpenseManagement: React.FC<ExpenseManagementProps> = ({ 
     expenses, setExpenses, expenseCategories, treasuries, showNotification, currentUser, defaultValues,
     customerReceipts, supplierPayments, treasuryTransfers, salesInvoices, purchaseInvoices, salesReturns, purchaseReturns,
-    draft, setDraft, isEditing, setIsEditing
+    draft, setDraft, isEditing, setIsEditing, companyData
 }) => {
     
     const getNextExpenseId = () => {
@@ -190,6 +192,61 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
         setDraft(null); 
         setCategorySearchQuery(''); 
         setTreasurySearchQuery(''); 
+    };
+    
+    const handlePrint = (expense: Expense) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const category = expenseCategories.find(c => c.id === expense.categoryId)?.name || '';
+        const treasury = treasuries.find(t => t.id === expense.treasuryId)?.name || '';
+
+        const detailsHtml = `
+            <p>صرفنا إلى السيد/ة: ........................................................</p>
+            <p>مبلغ وقدره: ${expense.amount.toFixed(2)} ج.م</p>
+            <p>نوع المصروف: ${category}</p>
+            <p>الخزينة: ${treasury}</p>
+            <p>ملاحظات: ${expense.notes || '-'}</p>
+        `;
+
+        const headers = ['م', 'البيان', 'المبلغ'];
+        const rowsHtml = `
+            <tr class="item-row">
+                <td>1</td>
+                <td>${category}</td>
+                <td class="bold">${expense.amount.toFixed(2)}</td>
+            </tr>
+        `;
+
+        const summaryHtml = `
+            <div class="summary-row total"><span>الإجمالي:</span><span>${expense.amount.toFixed(2)}</span></div>
+        `;
+
+        const signaturesHtml = `
+            <div class="signature-box">
+                <div class="signature-title">المستلم</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-title">المدير</div>
+                <div class="signature-line"></div>
+            </div>
+        `;
+
+        printWindow.document.write(getVoucherPrintTemplate(
+            'سند صرف',
+            expense.id.toString(),
+            formatDateForDisplay(expense.date),
+            companyData,
+            detailsHtml,
+            headers,
+            rowsHtml,
+            summaryHtml,
+            signaturesHtml,
+            'A4',
+            '#c2410c' // Orange-red for expenses
+        ));
+        printWindow.document.close();
     };
     
     const suggestedCategories = React.useMemo(() => {
@@ -440,6 +497,7 @@ const ExpenseManagement: React.FC<ExpenseManagementProps> = ({
                                         <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{exp.createdBy || '-'}</td>
                                         <td className="p-3">
                                             <div className="flex justify-center gap-2">
+                                                <button onClick={() => handlePrint(exp)} className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="طباعة"><PrintIcon /></button>
                                                 <button onClick={() => handleEdit(exp, false)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تعديل"><EditIcon /></button>
                                                 <button onClick={() => handleEdit(exp, true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="عرض"><ViewIcon /></button>
                                                 {canDelete && <button onClick={() => handleDelete(exp)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="حذف"><DeleteIcon /></button>}

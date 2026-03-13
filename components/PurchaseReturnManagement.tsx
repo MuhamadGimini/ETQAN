@@ -367,7 +367,8 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                 <title>مرتجع مشتريات رقم ${ret.id}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
                 <style>
-                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
+                    @page { size: A4; margin: 1cm; }
+                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #000; line-height: 1.4; }
                     .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
                     .logo-section { width: 33%; text-align: left; }
                     .logo-section img { max-width: 140px; max-height: 90px; object-fit: contain; margin-bottom: 5px; }
@@ -375,13 +376,14 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                     .company-center h1 { margin: 0; font-size: 1.6rem; font-weight: 900; color: #991b1b; }
                     .invoice-badge { display: inline-block; border: 2px solid #991b1b; color: #991b1b; padding: 4px 15px; border-radius: 6px; margin-top: 8px; font-weight: 900; font-size: 1.1rem; }
                     .doc-info { width: 33%; text-align: right; }
+                    .tax-info { font-size: 9pt; font-weight: bold; color: #000; line-height: 1.2; margin-top: 5px; }
                     
                     .details-block { margin: 15px 0; font-size: 12pt; border-right: 4px solid #991b1b; padding-right: 12px; }
                     .details-block p { margin: 4px 0; font-weight: bold; }
 
                     table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #991b1b; }
                     th { background: #991b1b; color: white; padding: 8px; text-align: center; font-size: 12pt; border: 1px solid #991b1b; }
-                    td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11pt; }
+                    td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11pt; color: #000; }
                     
                     .item-row:nth-child(even) { background-color: #fef2f2; }
                     
@@ -414,6 +416,10 @@ const PurchaseReturnManagement: React.FC<PurchaseReturnManagementProps> = ({
                     </div>
                     <div class="logo-section">
                         ${companyData.logo ? `<img src="${companyData.logo}" />` : ''}
+                        <div class="tax-info">
+                            ${companyData.tr ? `<div>رقم التسجيل: ${companyData.tr}</div>` : ''}
+                            ${companyData.cr ? `<div>سجل تجاري: ${companyData.cr}</div>` : ''}
+                        </div>
                     </div>
                 </div>
 

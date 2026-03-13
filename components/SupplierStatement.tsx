@@ -279,7 +279,7 @@ const SupplierStatement: React.FC<SupplierStatementProps> = ({
         const subtitle = `كشف حساب مورد: ${supplier.name} | الفترة: ${startDate ? formatDateForDisplay(startDate) : 'البداية'} إلى ${endDate ? formatDateForDisplay(endDate) : 'الآن'}`;
         const title = `كشف حساب مورد ${statementData.type === 'detailed' ? '(تفصيلي)' : '(إجمالي)'}`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#dc2626'));
         printWindow.document.close();
     };
 

@@ -190,7 +190,7 @@ const AnalysisReport: React.FC<AnalysisReportProps> = ({ salesInvoices, salesRet
         };
 
         const subtitle = `تحليل الأداء للفترة: ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)} - ${filterNames[activeFilter]}`;
-        printWindow.document.write(getReportPrintTemplate('التقرير التفصيلي للتحليل', subtitle, companyData, headers, rowsHtml, ''));
+        printWindow.document.write(getReportPrintTemplate('التقرير التفصيلي للتحليل', subtitle, companyData, headers, rowsHtml, '', undefined, undefined, 'A4', '#6366f1'));
         printWindow.document.close();
     };
 

@@ -52,7 +52,7 @@ const AllSalesRepsStatement: React.FC<AllSalesRepsStatementProps> = ({
         `).join('');
 
         const subtitle = `الفترة من ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)}`;
-        printWindow.document.write(getReportPrintTemplate('تقرير أداء البائعين', subtitle, companyData, headers, rowsHtml, ''));
+        printWindow.document.write(getReportPrintTemplate('تقرير أداء البائعين', subtitle, companyData, headers, rowsHtml, '', undefined, undefined, 'A4', '#1e3a8a'));
         printWindow.document.close();
     };
 

@@ -217,6 +217,7 @@ const CustomerMovementComparison: React.FC<CustomerMovementComparisonProps> = ({
                     <script src="https://cdn.tailwindcss.com"></script>
                     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
                     <style>
+                        @page { size: A4; margin: 1cm; }
                         body { font-family: 'Cairo', sans-serif; direction: rtl; }
                         table { width: 100%; border-collapse: collapse; text-align: center; }
                         th, td { border: 1px solid #ccc; padding: 8px; font-size: 14px; }

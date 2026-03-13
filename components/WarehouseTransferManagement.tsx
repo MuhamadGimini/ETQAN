@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { WarehouseTransfer, WarehouseTransferItem, Item, Warehouse, NotificationType, MgmtUser, Unit, SalesInvoice, SalesReturn, PurchaseInvoice, PurchaseReturn } from '../types';
-import { Modal, ConfirmationModal, PlusCircleIcon, DeleteIcon, EditIcon, PrintIcon, ViewIcon, ChevronDownIcon, FormattedNumber, ArchiveIcon, SwitchHorizontalIcon, WhatsAppIcon } from './Shared';
+import { Modal, ConfirmationModal, PlusCircleIcon, DeleteIcon, EditIcon, PrintIcon, ViewIcon, ChevronDownIcon, FormattedNumber, ArchiveIcon, SwitchHorizontalIcon, WhatsAppIcon, DownloadIcon } from './Shared';
 import QuickAddItemModal from './QuickAddItemModal';
 import { searchMatch, formatDateForDisplay } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
+import { exportToExcel } from '../services/excel';
 
 interface WarehouseTransferManagementProps {
     warehouseTransfers: WarehouseTransfer[];
@@ -200,7 +201,7 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
             return `<tr><td class="p-3 border text-center">${index + 1}</td><td class="p-3 border text-center font-mono">${itemData?.barcode || '-'}</td><td class="p-3 border text-right">${itemData?.name || 'صنف'}</td><td class="p-3 border text-center font-bold">${transferItem.quantity}</td></tr>`;
         }).join('');
 
-        printWindow.document.write(`<html dir="rtl"><head><title>إذن تحويل #${transfer.id}</title><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"><style>body { font-family: 'Cairo', sans-serif; margin: 20px; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th, td { border: 1px solid #d1d5db; padding: 0.75rem; } thead { background-color: #1f2937; color: #ffffff; }</style></head><body onload="window.print();window.close()"><div class="container"><div class="header" style="text-align:center;"><h1>إذن تحويل مخزني</h1><p>رقم الإذن: ${transfer.id} | التاريخ: ${new Date(transfer.date).toLocaleDateString('ar-EG')}</p></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;padding:1rem;background-color:#f9fafb;border:1 solid #e5e7eb;border-radius:0.5rem;"><p><strong>من مخزن:</strong> ${fromWh}</p><p><strong>إلى مخزن:</strong> ${toWh}</p><p><strong>تم بواسطة:</strong> ${transfer.createdBy}</p></div><table><thead><tr><th>#</th><th>الباركود</th><th class="text-right">اسم الصنف</th><th>الكمية المحولة</th></tr></thead><tbody>${rows}</tbody></table></div></body></html>`);
+        printWindow.document.write(`<html dir="rtl"><head><title>إذن تحويل #${transfer.id}</title><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"><style>@page { size: A4; margin: 1cm; } body { font-family: 'Cairo', sans-serif; margin: 20px; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th, td { border: 1px solid #d1d5db; padding: 0.75rem; } thead { background-color: #1f2937; color: #ffffff; }</style></head><body onload="window.print();window.close()"><div class="container"><div class="header" style="text-align:center;"><h1>إذن تحويل مخزني</h1><p>رقم الإذن: ${transfer.id} | التاريخ: ${new Date(transfer.date).toLocaleDateString('ar-EG')}</p></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;padding:1rem;background-color:#f9fafb;border:1 solid #e5e7eb;border-radius:0.5rem;"><p><strong>من مخزن:</strong> ${fromWh}</p><p><strong>إلى مخزن:</strong> ${toWh}</p><p><strong>تم بواسطة:</strong> ${transfer.createdBy}</p></div><table><thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800"><tr><th>#</th><th>الباركود</th><th class="text-right">اسم الصنف</th><th>الكمية المحولة</th></tr></thead><tbody>${rows}</tbody></table></div></body></html>`);
         printWindow.document.close();
     };
 
@@ -231,6 +232,40 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
             );
         }).slice().reverse();
     }, [warehouseTransfers, logFilters, warehouses, items]);
+
+    const handleExportExcel = () => {
+        const dataToExport = filteredTransfers.map(t => {
+            const fromWhName = warehouses.find(w => w.id === t.fromWarehouseId)?.name || '';
+            const toWhName = warehouses.find(w => w.id === t.toWarehouseId)?.name || '';
+            const totalItems = t.items.reduce((acc, i) => acc + i.quantity, 0);
+            
+            return {
+                'رقم التحويل': t.id,
+                'التاريخ': t.date,
+                'من مخزن': fromWhName,
+                'إلى مخزن': toWhName,
+                'إجمالي الكمية': totalItems,
+                'ملاحظات': t.notes || ''
+            };
+        });
+        exportToExcel(dataToExport, 'تحويلات_المخازن');
+    };
+
+    const exportSingleTransfer = (trans: WarehouseTransfer) => {
+        const fromWhName = warehouses.find(w => w.id === trans.fromWarehouseId)?.name || '';
+        const toWhName = warehouses.find(w => w.id === trans.toWarehouseId)?.name || '';
+        const totalItems = trans.items.reduce((acc, i) => acc + i.quantity, 0);
+        
+        const data = [{
+            'رقم التحويل': trans.id,
+            'التاريخ': trans.date,
+            'من مخزن': fromWhName,
+            'إلى مخزن': toWhName,
+            'إجمالي الكمية': totalItems,
+            'ملاحظات': trans.notes || ''
+        }];
+        exportToExcel(data, `تحويل_مخزني_${trans.id}`);
+    };
 
     return (
         <div className="space-y-6">
@@ -317,9 +352,9 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
                             </div>
                         )}
 
-                        <div className="overflow-x-auto border-2 border-indigo-100 dark:border-indigo-900 rounded-xl overflow-hidden shadow-inner">
-                            <table className="w-full text-right table-fixed">
-                                <thead className="bg-indigo-50 dark:bg-indigo-900/40">
+                        <div className="overflow-x-auto border-2 border-indigo-100 dark:border-indigo-900 rounded-xl overflow-hidden shadow-inner max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right table-fixed">
+                                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 bg-indigo-50 dark:bg-indigo-900/40">
                                     <tr>
                                         <th className="p-3 text-xs font-bold w-24 text-center">الباركود</th>
                                         <th className="p-3 text-xs font-bold">اسم الصنف المحول</th>
@@ -429,18 +464,23 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
             <div className={cardClass}>
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-indigo-100 dark:border-indigo-900 pb-3 gap-4">
                     <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-300">سجل التحويلات السابقة</h2>
-                    <div className="flex bg-indigo-50 dark:bg-indigo-900/30 p-1 rounded-lg border border-indigo-100">
-                        <button 
-                            onClick={() => setLogViewMode('summary')}
-                            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${logViewMode === 'summary' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'}`}
-                        >
-                            عرض إجمالي
-                        </button>
-                        <button 
-                            onClick={() => setLogViewMode('detailed')}
-                            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${logViewMode === 'detailed' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'}`}
-                        >
-                            عرض تفصيلي
+                    <div className="flex items-center gap-4">
+                        <div className="flex bg-indigo-50 dark:bg-indigo-900/30 p-1 rounded-lg border border-indigo-100">
+                            <button 
+                                onClick={() => setLogViewMode('summary')}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${logViewMode === 'summary' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'}`}
+                            >
+                                عرض إجمالي
+                            </button>
+                            <button 
+                                onClick={() => setLogViewMode('detailed')}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${logViewMode === 'detailed' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'}`}
+                            >
+                                عرض تفصيلي
+                            </button>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); handleExportExcel(); }} className="bg-indigo-600 text-white p-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center" title="تصدير إلى إكسيل">
+                            <DownloadIcon className="w-6 h-6 m-0 text-white" />
                         </button>
                     </div>
                 </div>
@@ -481,6 +521,7 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
                                 <th className="p-3 border-b-2 border-indigo-200 dark:border-indigo-900">من مخزن</th>
                                 <th className="p-3 border-b-2 border-indigo-200 dark:border-indigo-900">إلى مخزن</th>
                                 <th className="p-3 border-b-2 border-indigo-200 dark:border-indigo-900">الأصناف</th>
+                                <th className="p-3 border-b-2 border-indigo-200 dark:border-indigo-900 text-center w-24">تصدير</th>
                                 <th className="p-3 border-b-2 border-indigo-200 dark:border-indigo-900 text-center w-24">إجراءات</th>
                             </tr>
                         </thead>
@@ -512,6 +553,7 @@ const WarehouseTransferManagement: React.FC<WarehouseTransferManagementProps> = 
                                                 </div>
                                             )}
                                         </td>
+                                        <td className="p-3 text-center"><button onClick={() => exportSingleTransfer(t)} className="p-1 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="تصدير إكسيل"><DownloadIcon className="w-5 h-5"/></button></td>
                                         <td className="p-3">
                                             <div className="flex justify-center gap-2">
                                                 <button onClick={() => { setDraft(t); setIsViewing(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-full transition-colors" title="عرض">

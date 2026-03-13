@@ -269,7 +269,7 @@ const SalesReport: React.FC<SalesReportProps> = ({
         const subtitle = `الفترة من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}`;
         const title = `تقرير مبيعات ${isSummary ? 'إجمالي' : 'تفصيلي'}`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#1e3a8a'));
         printWindow.document.close();
     };
 

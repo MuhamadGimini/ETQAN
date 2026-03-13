@@ -218,7 +218,7 @@ const SalesRepStatement: React.FC<SalesRepStatementProps> = ({
 
         const subtitle = `كشف حساب بائع: ${salesRep.name} | الفترة: ${formatDateForDisplay(startDate) || 'البداية'} إلى ${formatDateForDisplay(endDate) || 'النهاية'}`;
 
-        printWindow.document.write(getReportPrintTemplate('كشف حساب بائع', subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate('كشف حساب بائع', subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#1e3a8a'));
         printWindow.document.close();
     };
 

@@ -319,7 +319,7 @@ const PurchaseReport: React.FC<PurchaseReportProps> = ({
         const subtitle = `الفترة من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}`;
         const title = `تقرير مشتريات ${isSummary ? 'إجمالي' : 'تفصيلي'}`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#dc2626'));
         printWindow.document.close();
     };
 

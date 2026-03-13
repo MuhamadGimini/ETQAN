@@ -358,7 +358,7 @@ ${defaultValues.whatsappFooter}`;
         const subtitle = `كشف حساب عميل: ${customer.name} | الفترة: ${startDate ? formatDateForDisplay(startDate) : 'البداية'} إلى ${endDate ? formatDateForDisplay(endDate) : 'الآن'}`;
         const title = `كشف حساب عميل ${statementData.type === 'detailed' ? '(تفصيلي)' : '(إجمالي)'}`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#16a34a'));
         printWindow.document.close();
     };
 

@@ -256,7 +256,7 @@ const WeeklyReport: React.FC<WeeklyReportProps> = ({
         const subtitle = `تقرير أداء أسبوعي لآخر ${numberOfWeeks} أسابيع`;
         const title = `التقرير الأسبوعي الشامل`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, undefined, undefined, undefined, 'A4', '#0f766e'));
         printWindow.document.close();
     };
 
@@ -290,9 +290,9 @@ const WeeklyReport: React.FC<WeeklyReportProps> = ({
             </div>
 
             <div className={cardClass}>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-right border-collapse">
-                        <thead>
+                <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                        <table className="w-full text-right border-collapse">
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
                             <tr className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
                                 <th rowSpan={2} className="p-3 border border-gray-300 dark:border-gray-600 text-center align-middle">فترة الأسبوع</th>
                                 <th colSpan={2} className="p-3 border border-gray-300 dark:border-gray-600 text-center bg-blue-50 dark:bg-blue-900/20">أصناف أول المدة</th>

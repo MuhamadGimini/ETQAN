@@ -189,7 +189,7 @@ const AllSuppliersStatement: React.FC<AllSuppliersStatementProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('تقرير أرصدة الموردين النهائية', '', companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate('تقرير أرصدة الموردين النهائية', '', companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#dc2626'));
         printWindow.document.close();
     };
 

@@ -243,7 +243,7 @@ const ItemMovement: React.FC<ItemMovementProps> = ({
         `;
 
         const subtitle = `كشف حركة صنف تفصيلي: ${reportData.itemName} | مخزن: ${reportData.warehouseName}`;
-        printWindow.document.write(getReportPrintTemplate('تقرير حركة صنف', subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate('تقرير حركة صنف', subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#4f46e5'));
         printWindow.document.close();
     };
 

@@ -223,7 +223,7 @@ const TreasuryTransferManagement: React.FC<TreasuryTransferManagementProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('إيصال تحويل نقدية', `مستند رقم ${transfer.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml));
+        printWindow.document.write(getReportPrintTemplate('إيصال تحويل نقدية', `مستند رقم ${transfer.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml, 'A4', '#0f766e'));
         printWindow.document.close();
     };
 

@@ -4,7 +4,7 @@ import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, Che
 import type { CustomerReceipt, Customer, Treasury, NotificationType, MgmtUser, SalesInvoice, SalesReturn, DefaultValues, CompanyData, SupplierPayment, Expense, TreasuryTransfer, PurchaseInvoice, PurchaseReturn, DocToView } from '../types';
 import { searchMatch, formatPhoneNumberForWhatsApp, formatDateForDisplay, formatNumber } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
-import { getReportPrintTemplate } from '../utils/printing';
+import { getReportPrintTemplate, getVoucherPrintTemplate } from '../utils/printing';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
 
@@ -216,39 +216,51 @@ const CustomerReceiptManagement: React.FC<CustomerReceiptManagementProps> = ({
         const treasury = treasuries.find(t => t.id === receipt.treasuryId)?.name || '';
         const methodLabel = receipt.paymentMethod === 'cash' ? 'نقدي' : receipt.paymentMethod === 'check' ? 'شيك' : 'خصم مسموح به';
 
-        const headers = ['رقم السند', 'التاريخ', 'العميل', 'طريقة القبض', 'المبلغ', 'الخزينة'];
+        const detailsHtml = `
+            <p>استلمنا من السيد/ة: ${customer}</p>
+            <p>مبلغ وقدره: ${receipt.amount.toFixed(2)} ج.م</p>
+            <p>طريقة الدفع: ${methodLabel}</p>
+            <p>الخزينة: ${treasury}</p>
+            <p>ملاحظات: ${receipt.notes || '-'}</p>
+        `;
+
+        const headers = ['م', 'البيان', 'المبلغ'];
         const rowsHtml = `
-            <tr>
-                <td>${receipt.id}</td>
-                <td>${formatDateForDisplay(receipt.date)}</td>
-                <td>${customer}</td>
-                <td>${methodLabel}</td>
-                <td class="font-black text-green">${receipt.amount.toFixed(2)}</td>
-                <td>${treasury}</td>
+            <tr class="item-row">
+                <td>1</td>
+                <td>دفعة من الحساب</td>
+                <td class="bold">${receipt.amount.toFixed(2)}</td>
             </tr>
         `;
 
         const summaryHtml = `
-            <div class="summary-item"><span>المبلغ:</span><span class="text-green">${receipt.amount.toFixed(2)}</span></div>
-            <div class="summary-item"><span>ملاحظات:</span><span>${receipt.notes || '-'}</span></div>
+            <div class="summary-row total"><span>الإجمالي:</span><span>${receipt.amount.toFixed(2)}</span></div>
         `;
 
         const signaturesHtml = `
             <div class="signature-box">
+                <div class="signature-title">المستلم</div>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
                 <div class="signature-title">العميل</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">أمين الخزينة</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">مدير الحسابات</div>
                 <div class="signature-line"></div>
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('سند قبض عميل', `مستند رقم ${receipt.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml, 'A5 landscape'));
+        printWindow.document.write(getVoucherPrintTemplate(
+            'سند قبض',
+            receipt.id.toString(),
+            formatDateForDisplay(receipt.date),
+            companyData,
+            detailsHtml,
+            headers,
+            rowsHtml,
+            summaryHtml,
+            signaturesHtml,
+            'A4',
+            '#16a34a' // Green for receipts
+        ));
         printWindow.document.close();
     };
 

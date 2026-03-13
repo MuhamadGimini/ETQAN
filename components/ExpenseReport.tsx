@@ -88,7 +88,7 @@ const ExpenseReport: React.FC<ExpenseReportProps> = ({
         const subtitle = `الفترة من ${formatDateForDisplay(startDate)} إلى ${formatDateForDisplay(endDate)}`;
         const title = `تقرير المصروفات التفصيلي`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#c2410c'));
         printWindow.document.close();
     };
 

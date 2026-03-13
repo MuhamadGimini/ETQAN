@@ -4,7 +4,7 @@ import { ConfirmationModal, EditIcon, DeleteIcon, ViewIcon, FormattedNumber, Che
 import type { SupplierPayment, Supplier, Treasury, NotificationType, MgmtUser, PurchaseInvoice, PurchaseReturn, DefaultValues, CompanyData, CustomerReceipt, Expense, TreasuryTransfer, SalesInvoice, SalesReturn, DocToView } from '../types';
 import { searchMatch, formatPhoneNumberForWhatsApp, formatDateForDisplay, formatNumber } from '../utils';
 import { useDateInput } from '../hooks/useDateInput';
-import { getReportPrintTemplate } from '../utils/printing';
+import { getReportPrintTemplate, getVoucherPrintTemplate } from '../utils/printing';
 
 import { calculateTreasuryBalance } from '../utils/calculations';
 
@@ -221,39 +221,51 @@ const SupplierPaymentManagement: React.FC<SupplierPaymentManagementProps> = ({
         const treasury = treasuries.find(t => t.id === payment.treasuryId)?.name || '';
         const methodLabel = payment.paymentMethod === 'cash' ? 'نقدي' : payment.paymentMethod === 'check' ? 'شيك' : 'خصم مكتسب';
 
-        const headers = ['رقم السند', 'التاريخ', 'المورد', 'طريقة الدفع', 'المبلغ', 'الخزينة'];
+        const detailsHtml = `
+            <p>دفعنا إلى السيد/ة: ${supplier}</p>
+            <p>مبلغ وقدره: ${payment.amount.toFixed(2)} ج.م</p>
+            <p>طريقة الدفع: ${methodLabel}</p>
+            <p>الخزينة: ${treasury}</p>
+            <p>ملاحظات: ${payment.notes || '-'}</p>
+        `;
+
+        const headers = ['م', 'البيان', 'المبلغ'];
         const rowsHtml = `
-            <tr>
-                <td>${payment.id}</td>
-                <td>${formatDateForDisplay(payment.date)}</td>
-                <td>${supplier}</td>
-                <td>${methodLabel}</td>
-                <td class="font-black text-red">${payment.amount.toFixed(2)}</td>
-                <td>${treasury}</td>
+            <tr class="item-row">
+                <td>1</td>
+                <td>دفعة من الحساب</td>
+                <td class="bold">${payment.amount.toFixed(2)}</td>
             </tr>
         `;
 
         const summaryHtml = `
-            <div class="summary-item"><span>المبلغ:</span><span class="text-red">${payment.amount.toFixed(2)}</span></div>
-            <div class="summary-item"><span>ملاحظات:</span><span>${payment.notes || '-'}</span></div>
+            <div class="summary-row total"><span>الإجمالي:</span><span>${payment.amount.toFixed(2)}</span></div>
         `;
 
         const signaturesHtml = `
             <div class="signature-box">
-                <div class="signature-title">المورد</div>
+                <div class="signature-title">المستلم</div>
                 <div class="signature-line"></div>
             </div>
             <div class="signature-box">
-                <div class="signature-title">أمين الخزينة</div>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-title">مدير الحسابات</div>
+                <div class="signature-title">المدير</div>
                 <div class="signature-line"></div>
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('سند دفع مورد', `مستند رقم ${payment.id}`, companyData, headers, rowsHtml, summaryHtml, undefined, signaturesHtml, 'A5 landscape'));
+        printWindow.document.write(getVoucherPrintTemplate(
+            'سند دفع',
+            payment.id.toString(),
+            formatDateForDisplay(payment.date),
+            companyData,
+            detailsHtml,
+            headers,
+            rowsHtml,
+            summaryHtml,
+            signaturesHtml,
+            'A4',
+            '#dc2626' // Red for payments
+        ));
         printWindow.document.close();
     };
 

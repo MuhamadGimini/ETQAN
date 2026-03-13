@@ -370,7 +370,8 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                 <title>مرتجع مبيعات رقم ${ret.id}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
                 <style>
-                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #333; line-height: 1.4; }
+                    @page { size: A4; margin: 1cm; }
+                    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; color: #000; line-height: 1.4; }
                     .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
                     .logo-section { width: 33%; text-align: left; }
                     .logo-section img { max-width: 140px; max-height: 90px; object-fit: contain; margin-bottom: 5px; }
@@ -378,12 +379,12 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                     .company-center h1 { margin: 0; font-size: 1.6rem; font-weight: 900; color: #dc2626; }
                     .invoice-badge { display: inline-block; border: 2px solid #dc2626; color: #dc2626; padding: 4px 15px; border-radius: 6px; margin-top: 8px; font-weight: 900; font-size: 1.1rem; }
                     .doc-info { width: 33%; text-align: right; }
-                    .tax-info { font-size: 9pt; font-weight: bold; color: #475569; line-height: 1.2; }
+                    .tax-info { font-size: 9pt; font-weight: bold; color: #000; line-height: 1.2; margin-top: 5px; }
                     .details-block { margin: 15px 0; font-size: 12pt; border-right: 4px solid #dc2626; padding-right: 12px; }
                     .details-block p { margin: 4px 0; font-weight: bold; }
                     table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #dc2626; }
                     th { background: #dc2626; color: white; padding: 8px; text-align: center; font-size: 12pt; border: 1px solid #dc2626; }
-                    td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11pt; }
+                    td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 11pt; color: #000; }
                     .item-row:nth-child(even) { background-color: #fef2f2; }
                     @media print {
                         .item-row:nth-child(even) { background-color: transparent !important; }
@@ -403,7 +404,13 @@ const SalesReturnManagement: React.FC<SalesReturnManagementProps> = ({
                 <div class="header-top">
                     <div class="doc-info"><p class="heavy">التاريخ: ${formatDateForDisplay(ret.date)}</p><p class="heavy">رقم المرتجع: ${ret.id}</p></div>
                     <div class="company-center"><h1>${companyData.name}</h1><div class="invoice-badge">مرتجع مبيعات</div></div>
-                    <div class="logo-section">${companyData.logo ? `<img src="${companyData.logo}" />` : ''}<div class="tax-info">${companyData.tr ? `<div>رقم التسجيل: ${companyData.tr}</div>` : ''}${companyData.cr ? `<div>سجل تجاري: ${companyData.cr}</div>` : ''}</div></div>
+                    <div class="logo-section">
+                        ${companyData.logo ? `<img src="${companyData.logo}" />` : ''}
+                        <div class="tax-info">
+                            ${companyData.tr ? `<div>رقم التسجيل: ${companyData.tr}</div>` : ''}
+                            ${companyData.cr ? `<div>سجل تجاري: ${companyData.cr}</div>` : ''}
+                        </div>
+                    </div>
                 </div>
                 <div class="details-block"><p>العميل: ${customer?.name || 'عميل نقدي'}</p><p>الرصيد قبل المرتجع: <span style="color: #dc2626;">${balanceBefore.toFixed(2)}</span></p></div>
                 <table>

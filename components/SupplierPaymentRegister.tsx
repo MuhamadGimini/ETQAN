@@ -89,7 +89,7 @@ const SupplierPaymentRegister: React.FC<SupplierPaymentRegisterProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('سجل سندات الدفع', '', companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate('سجل سندات الدفع', '', companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#dc2626'));
         printWindow.document.close();
     };
 

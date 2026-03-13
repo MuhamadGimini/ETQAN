@@ -89,7 +89,7 @@ const CustomerReceiptRegister: React.FC<CustomerReceiptRegisterProps> = ({
             </div>
         `;
 
-        printWindow.document.write(getReportPrintTemplate('سجل سندات القبض', '', companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate('سجل سندات القبض', '', companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#16a34a'));
         printWindow.document.close();
     };
 

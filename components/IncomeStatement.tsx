@@ -187,7 +187,7 @@ const IncomeStatement: React.FC<IncomeStatementProps> = ({
         const subtitle = `للفترة من ${formatDateForDisplay(startDate) || 'البداية'} إلى ${formatDateForDisplay(endDate) || 'النهاية'}`;
         const title = `قائمة الدخل (الأرباح والخسائر)`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, summaryHtml, undefined, undefined, 'A4', '#0f766e'));
         printWindow.document.close();
     };
 

@@ -142,7 +142,7 @@ const DailyLedger: React.FC<DailyLedgerProps> = ({
         const subtitle = `التاريخ: ${formatDateForDisplay(selectedDate)} | الخزينة: ${reportData.treasuryName}`;
         const title = `تقرير النقدية اليومي`;
 
-        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml));
+        printWindow.document.write(getReportPrintTemplate(title, subtitle, companyData, headers, rowsHtml, undefined, undefined, undefined, 'A4', '#0f766e'));
         printWindow.document.close();
     };
 
