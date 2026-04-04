@@ -44,6 +44,7 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
     const [isMuted, setIsMuted] = useState(false);
     const [selectedStation, setSelectedStation] = useState({ name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://n0a.radiojar.com/8s5u5tpdtwzuv' });
     const [isRadioPlaying, setIsRadioPlaying] = useState(false);
+    const [radioVolume, setRadioVolume] = useState(1);
     const [isLiveActive, setIsLiveActive] = useState(false);
     const [liveTranscription, setLiveTranscription] = useState('');
     
@@ -56,10 +57,15 @@ const Chat: React.FC<ChatProps> = ({ currentUser, departments, users, onlineSess
     
     const stations = [
         { name: 'إذاعة القرآن الكريم - القاهرة', url: 'https://n0a.radiojar.com/8s5u5tpdtwzuv' },
+        { name: 'الشبكة الاسلامية للقرآن', url: 'https://backup.qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad/أثير راديو.mp3' },
         { name: 'إذاعة القرآن الكريم - السعودية', url: 'https://n02.radiojar.com/4wqre23fytzuv' }, 
         { name: 'قناة المجد للقرآن الكريم (تراتيل)', url: 'https://backup.qurango.net/radio/tarateel' },
         { name: 'إذاعة الشيخ ماهر المعيقلي', url: 'https://Qurango.net/radio/maher_al_meaqli.mp3' },
         { name: 'إذاعة الشيخ مشاري العفاسي', url: 'https://qurango.net/radio/mishary_alafasi.mp3' },
+        { name: 'إذاعة الشيخ احمد العجمي', url: 'https://qurango.net/radio/ahmad_alajmy.mp3' },
+        { name: 'إذاعة الشيخ فارس عباد', url: 'https://qurango.net/radio/fares_abbad.mp3' },
+        { name: 'إذاعة الشيخ سعد الغامدي', url: 'https://Qurango.net/radio/saad_alghamdi.mp3' },
+        { name: 'إذاعة الشيخ محمد جبريل', url: 'https://backup.qurango.net/radio/mohammed_jibreel/أثير راديو.mp3' },
         { name: 'إذاعة الشيخ عبدالباسط عبدالصمد', url: 'https://backup.qurango.net/radio/abdulbasit_abdulsamad_mojawwad' },
         { name: 'إذاعة الشيخ محمد صديق المنشاوي', url: 'https://backup.qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad' },
         { name: 'إذاعة الشيخ محمود خليل الحصري', url: 'https://backup.qurango.net/radio/mahmoud_khalil_alhussary_mojawwad' },
@@ -653,7 +659,14 @@ ${dataContext}
         return new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
-    // Radio control effect
+    // Radio volume effect
+    useEffect(() => {
+        if (radioAudioRef.current) {
+            radioAudioRef.current.volume = radioVolume;
+        }
+    }, [radioVolume]);
+
+    // Radio play/pause effect
     useEffect(() => {
         const audio = radioAudioRef.current;
         if (audio) {
@@ -663,10 +676,13 @@ ${dataContext}
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.error("Radio play error:", error instanceof Error ? error.message : String(error));
-                        // Don't automatically stop on all errors to allow buffering/retries
-                        if (error && typeof error === 'object' && 'name' in error && error.name === 'NotAllowedError') {
-                             setIsRadioPlaying(false);
+                        // Ignore AbortError which happens when a new load/play request interrupts an ongoing one
+                        if (error.name !== 'AbortError') {
+                            console.error("Radio play error:", error instanceof Error ? error.message : String(error));
+                            // Don't automatically stop on all errors to allow buffering/retries
+                            if (error && typeof error === 'object' && 'name' in error && error.name === 'NotAllowedError') {
+                                 setIsRadioPlaying(false);
+                            }
                         }
                     });
                 }
@@ -860,7 +876,7 @@ ${dataContext}
                                     </div>
                                     
                                     <div className="w-full max-w-md space-y-4">
-                                        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-center">
+                                        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col items-center gap-3">
                                             <button
                                                 onClick={() => setIsRadioPlaying(!isRadioPlaying)}
                                                 className={`px-8 py-3 rounded-full font-bold text-white shadow-lg transition-all transform hover:scale-105 ${
@@ -871,6 +887,21 @@ ${dataContext}
                                             >
                                                 {isRadioPlaying ? 'إيقاف التشغيل' : 'تشغيل الآن'}
                                             </button>
+                                            
+                                            {/* Volume Control */}
+                                            <div className="w-full flex items-center gap-3 mt-2 px-2" dir="ltr">
+                                                <VolumeX size={18} className="text-gray-400" />
+                                                <input 
+                                                    type="range" 
+                                                    min="0" 
+                                                    max="1" 
+                                                    step="0.01" 
+                                                    value={radioVolume}
+                                                    onChange={(e) => setRadioVolume(parseFloat(e.target.value))}
+                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#008069]"
+                                                />
+                                                <Volume2 size={18} className="text-[#008069]" />
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto">

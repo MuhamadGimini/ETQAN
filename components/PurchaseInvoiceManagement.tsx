@@ -554,7 +554,8 @@ const PurchaseInvoiceManagement: React.FC<PurchaseInvoiceManagementProps> = Reac
         
         const data = inv.items.map(item => {
             const itemData = items.find(i => i.id === item.itemId);
-            const warehouse = warehouses.find(w => w.id === (item.warehouseId !== undefined ? item.warehouseId : inv.warehouseId));
+            const warehouseId = item.warehouseId || itemData?.warehouseId || inv.warehouseId;
+            const warehouse = warehouses.find(w => w.id === warehouseId);
             return {
                 'رقم الفاتورة': inv.id,
                 'التاريخ': inv.date,

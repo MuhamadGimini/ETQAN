@@ -56,6 +56,7 @@ interface DetailedReportData {
     totalSales: number;
     totalReturns: number;
     netSales: number;
+    totalCost: number;
     totalProfit: number;
     netSalesQty: number;
 }
@@ -66,6 +67,7 @@ interface SummaryReportData {
     totalSales: number;
     totalReturns: number;
     netSales: number;
+    totalCost: number;
     totalProfit: number;
     netSalesQty: number;
 }
@@ -162,7 +164,7 @@ const SalesReport: React.FC<SalesReportProps> = ({
 
         if (searchType === 'summary') {
             const rows: SummaryReportRow[] = [];
-            let totalSales = 0, totalReturns = 0, totalProfit = 0, netQty = 0;
+            let totalSales = 0, totalReturns = 0, totalProfit = 0, totalCost = 0, netQty = 0;
 
             const processList = (list: any[], type: 'مبيعات' | 'مرتجع') => {
                 list.forEach(doc => {
@@ -179,8 +181,18 @@ const SalesReport: React.FC<SalesReportProps> = ({
 
                     const profit = (itemsTotal - doc.discount) - cost;
 
-                    if (type === 'مبيعات') { totalSales += netTotal; totalProfit += profit; netQty += docQty; }
-                    else { totalReturns += netTotal; totalProfit -= profit; netQty -= docQty; }
+                    if (type === 'مبيعات') { 
+                        totalSales += netTotal; 
+                        totalCost += cost;
+                        totalProfit += profit; 
+                        netQty += docQty; 
+                    }
+                    else { 
+                        totalReturns += netTotal; 
+                        totalCost -= cost;
+                        totalProfit -= profit; 
+                        netQty -= docQty; 
+                    }
 
                     rows.push({
                         date: doc.date, type, docId: doc.id,
@@ -198,10 +210,10 @@ const SalesReport: React.FC<SalesReportProps> = ({
             processList(filteredReturns, 'مرتجع');
             rows.sort((a, b) => b.docId - a.docId);
 
-            setReportData({ type: 'summary', rows, totalSales, totalReturns, netSales: totalSales - totalReturns, totalProfit, netSalesQty: netQty });
+            setReportData({ type: 'summary', rows, totalSales, totalReturns, netSales: totalSales - totalReturns, totalCost, totalProfit, netSalesQty: netQty });
         } else {
             const rows: DetailedReportRow[] = [];
-            let totalSales = 0, totalReturns = 0, totalProfit = 0, netQty = 0;
+            let totalSales = 0, totalReturns = 0, totalProfit = 0, totalCost = 0, netQty = 0;
 
             const processList = (list: any[], type: 'مبيعات' | 'مرتجع') => {
                 list.forEach(doc => {
@@ -213,8 +225,18 @@ const SalesReport: React.FC<SalesReportProps> = ({
                         const lineCost = line.quantity * itemDef.purchasePrice;
                         const lineProfit = lineTotal - lineCost;
 
-                        if (type === 'مبيعات') { totalSales += lineTotal; totalProfit += lineProfit; netQty += line.quantity; }
-                        else { totalReturns += lineTotal; totalProfit -= lineProfit; netQty -= line.quantity; }
+                        if (type === 'مبيعات') { 
+                            totalSales += lineTotal; 
+                            totalCost += lineCost;
+                            totalProfit += lineProfit; 
+                            netQty += line.quantity; 
+                        }
+                        else { 
+                            totalReturns += lineTotal; 
+                            totalCost -= lineCost;
+                            totalProfit -= lineProfit; 
+                            netQty -= line.quantity; 
+                        }
 
                         rows.push({
                             date: doc.date, type, docId: doc.id,
@@ -234,7 +256,7 @@ const SalesReport: React.FC<SalesReportProps> = ({
             processList(filteredReturns, 'مرتجع');
             rows.sort((a, b) => b.docId - a.docId);
 
-            setReportData({ type: 'detailed', rows, totalSales, totalReturns, netSales: totalSales - totalReturns, totalProfit, netSalesQty: netQty });
+            setReportData({ type: 'detailed', rows, totalSales, totalReturns, netSales: totalSales - totalReturns, totalCost, totalProfit, netSalesQty: netQty });
         }
     };
 
@@ -263,7 +285,8 @@ const SalesReport: React.FC<SalesReportProps> = ({
             <div class="summary-item"><span>إجمالي المبيعات:</span><span>${reportData.totalSales.toFixed(2)}</span></div>
             <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-red">-${reportData.totalReturns.toFixed(2)}</span></div>
             <div class="summary-item"><span>صافي المبيعات:</span><span class="text-green">${reportData.netSales.toFixed(2)}</span></div>
-            <div class="summary-item"><span>صافي الأرباح:</span><span class="text-indigo">${reportData.totalProfit.toFixed(2)}</span></div>
+            <div class="summary-item"><span>تكلفة المبيعات:</span><span class="text-orange">${reportData.totalCost.toFixed(2)}</span></div>
+            <div class="summary-item"><span>هامش الربح:</span><span class="text-indigo">${reportData.totalProfit.toFixed(2)}</span></div>
         `;
 
         const subtitle = `الفترة من ${formatDateForDisplay(filters.startDate) || 'البداية'} إلى ${formatDateForDisplay(filters.endDate) || 'النهاية'}`;
@@ -396,7 +419,7 @@ const SalesReport: React.FC<SalesReportProps> = ({
 
             {reportData && (
                 <>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                         <div className="bg-gradient-to-br from-green-500 to-green-700 text-white p-4 rounded-xl shadow-lg">
                             <p className="text-xs opacity-80 font-bold">إجمالي المبيعات</p>
                             <p className="text-2xl font-black"><FormattedNumber value={reportData.totalSales} /></p>
@@ -409,8 +432,12 @@ const SalesReport: React.FC<SalesReportProps> = ({
                             <p className="text-xs opacity-80 font-bold">صافي المبيعات</p>
                             <p className="text-2xl font-black"><FormattedNumber value={reportData.netSales} /></p>
                         </div>
+                        <div className="bg-gradient-to-br from-orange-500 to-orange-700 text-white p-4 rounded-xl shadow-lg">
+                            <p className="text-xs opacity-80 font-bold">تكلفة المبيعات</p>
+                            <p className="text-2xl font-black"><FormattedNumber value={reportData.totalCost} /></p>
+                        </div>
                         <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-4 rounded-xl shadow-lg">
-                            <p className="text-xs opacity-80 font-bold">صافي الأرباح</p>
+                            <p className="text-xs opacity-80 font-bold">هامش الربح</p>
                             <p className="text-2xl font-black"><FormattedNumber value={reportData.totalProfit} /></p>
                         </div>
                     </div>

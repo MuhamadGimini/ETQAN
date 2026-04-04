@@ -49,15 +49,16 @@ export const menuItems = [
       { id: 'purchaseReport', label: 'تقرير المشتريات', group: 'تقارير المشتريات' },
       { id: 'supplierStatement', label: 'كشف حساب مورد', group: 'تقارير المشتريات' },
       { id: 'allSuppliersStatement', label: 'كشف حسابات الموردين', group: 'تقارير المشتريات' },
+      { id: 'purchaseProfitCalculator', label: 'حاسبة أرباح المشتريات', group: 'تقارير المشتريات' },
       // Inventory Reports Group
       { id: 'itemSearch', label: 'بحث الأصناف', group: 'تقارير المخازن والأصناف' },
       { id: 'itemMovement', label: 'كشف حركة صنف', group: 'تقارير المخازن والأصناف' },
       { id: 'analysisReport', label: 'تحليل أداء الأصناف', group: 'تقارير المخازن والأصناف' },
       { id: 'itemsInWarehouses', label: 'الأصناف في المخازن', group: 'تقارير المخازن والأصناف' },
       // Real-time Monitoring Group
-      { id: 'voucherRegister', label: 'سجل السندات العام', group: 'شاشات المتابعة اللحظية' },
-      { id: 'invoicesRegister', label: 'سجل الفواتير العام', group: 'شاشات المتابعة اللحظية' },
-      { id: 'itemsMovementRegister', label: 'سجل حركة الأصناف العام', group: 'شاشات المتابعة اللحظية' },
+      { id: 'voucherRegister', label: 'سجل السندات العام', group: 'سجلات المتابعة العامة' },
+      { id: 'invoicesRegister', label: 'سجل الفواتير العام', group: 'سجلات المتابعة العامة' },
+      { id: 'itemsMovementRegister', label: 'سجل حركة الأصناف العام', group: 'سجلات المتابعة العامة' },
       // Treasury Reports Group
       { id: 'dailyLedger', label: 'تقرير النقدية اليومي', group: 'تقارير الخزينة والمصاريف' },
       { id: 'customerReceiptRegister', label: 'سجل سندات القبض', group: 'تقارير الخزينة والمصاريف' },
@@ -66,6 +67,7 @@ export const menuItems = [
       // Profit Reports Group
       { id: 'incomeStatement', label: 'قائمة دخل', group: 'تقارير قوائم الأرباح' },
       { id: 'weeklyReport', label: 'تقرير اسبوعي', group: 'تقارير قوائم الأرباح' },
+      { id: 'generalReport', label: 'تقرير عام', group: 'تقارير قوائم الأرباح' },
   ]},
   { id: 'settings', label: 'الإعدادات', subItems: [
       { id: 'userManagement', label: 'إدارة المستخدمين', granular: ['edit', 'delete'] },

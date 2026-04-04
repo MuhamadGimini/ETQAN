@@ -23,6 +23,9 @@ interface CustomerSummary {
     totalSales: number;
     totalReturns: number;
     totalPayments: number;
+    totalReceipts: number;
+    totalInvoicePayments: number;
+    totalReturnRefunds: number;
     closingBalance: number;
 }
 
@@ -86,6 +89,9 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
                 totalSales,
                 totalReturns,
                 totalPayments: totalPayments - totalReturnRefunds, // Net payments for display
+                totalReceipts,
+                totalInvoicePayments,
+                totalReturnRefunds,
                 closingBalance,
             };
         });
@@ -117,8 +123,11 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
             totalSales: acc.totalSales + curr.totalSales,
             totalReturns: acc.totalReturns + curr.totalReturns,
             totalPayments: acc.totalPayments + curr.totalPayments,
+            totalReceipts: acc.totalReceipts + curr.totalReceipts,
+            totalInvoicePayments: acc.totalInvoicePayments + curr.totalInvoicePayments,
+            totalReturnRefunds: acc.totalReturnRefunds + curr.totalReturnRefunds,
             closingBalance: acc.closingBalance + curr.closingBalance
-        }), { count: 0, openingBalance: 0, totalSales: 0, totalReturns: 0, totalPayments: 0, closingBalance: 0 });
+        }), { count: 0, openingBalance: 0, totalSales: 0, totalReturns: 0, totalPayments: 0, totalReceipts: 0, totalInvoicePayments: 0, totalReturnRefunds: 0, closingBalance: 0 });
     }, [filteredSummaries]);
 
     const handleExport = () => {
@@ -181,7 +190,12 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
                     <td>${summary.openingBalance.toFixed(2)}</td>
                     <td class="text-green">${summary.totalSales.toFixed(2)}</td>
                     <td class="text-red">${summary.totalReturns.toFixed(2)}</td>
-                    <td class="text-indigo">${summary.totalPayments.toFixed(2)}</td>
+                    <td class="text-indigo">
+                        ${summary.totalPayments.toFixed(2)}
+                        <div style="font-size: 8pt; color: #666; margin-top: 2px;">
+                            (سندات: ${summary.totalReceipts.toFixed(2)} | فواتير: ${summary.totalInvoicePayments.toFixed(2)})
+                        </div>
+                    </td>
                     <td class="font-black ${summary.closingBalance >= 0 ? 'text-green' : 'text-red'}">${summary.closingBalance.toFixed(2)}</td>
                 </tr>
             `;
@@ -193,7 +207,15 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
                 ${reportMode === 'detailed' ? `
                     <div class="summary-item"><span>إجمالي المبيعات:</span><span class="text-green">${totals.totalSales.toFixed(2)}</span></div>
                     <div class="summary-item"><span>إجمالي المرتجعات:</span><span class="text-red">${totals.totalReturns.toFixed(2)}</span></div>
-                    <div class="summary-item"><span>إجمالي المدفوعات:</span><span class="text-indigo">${totals.totalPayments.toFixed(2)}</span></div>
+                    <div class="summary-item">
+                        <span>إجمالي المدفوعات:</span>
+                        <div class="text-right">
+                            <span class="text-indigo">${totals.totalPayments.toFixed(2)}</span>
+                            <div style="font-size: 8pt; color: #666; margin-top: 2px;">
+                                (سندات: ${totals.totalReceipts.toFixed(2)} | فواتير: ${totals.totalInvoicePayments.toFixed(2)})
+                            </div>
+                        </div>
+                    </div>
                 ` : ''}
                 <div class="summary-item font-black border-t border-gray-300 mt-2 pt-2">
                     <span>إجمالي المديونية (لنا):</span><span class="text-green">${totalReceivables.toFixed(2)}</span>
@@ -323,7 +345,14 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
                                             <td className="p-3 text-gray-700 dark:text-gray-300"><FormattedNumber value={summary.openingBalance} /></td>
                                             <td className="p-3 text-green-600 dark:text-green-400"><FormattedNumber value={summary.totalSales} /></td>
                                             <td className="p-3 text-red-600 dark:text-red-400"><FormattedNumber value={summary.totalReturns} /></td>
-                                            <td className="p-3 text-blue-600 dark:text-blue-400"><FormattedNumber value={summary.totalPayments} /></td>
+                                            <td className="p-3 text-blue-600 dark:text-blue-400">
+                                                <div className="flex flex-col">
+                                                    <FormattedNumber value={summary.totalPayments} />
+                                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                                        (سندات: <FormattedNumber value={summary.totalReceipts} /> | فواتير: <FormattedNumber value={summary.totalInvoicePayments} />)
+                                                    </span>
+                                                </div>
+                                            </td>
                                         </>
                                     )}
                                     <td className={`p-3 font-bold ${summary.closingBalance >= 0 ? 'text-green-700 dark:text-green-500' : 'text-red-700 dark:text-red-500'}`}>
@@ -345,7 +374,14 @@ const AllCustomersStatement: React.FC<AllCustomersStatementProps> = ({
                                         <td className="p-3 font-bold text-gray-800 dark:text-gray-200"><FormattedNumber value={totals.openingBalance} /></td>
                                         <td className="p-3 font-bold text-green-700 dark:text-green-400"><FormattedNumber value={totals.totalSales} /></td>
                                         <td className="p-3 font-bold text-red-700 dark:text-red-400"><FormattedNumber value={totals.totalReturns} /></td>
-                                        <td className="p-3 font-bold text-blue-700 dark:text-blue-400"><FormattedNumber value={totals.totalPayments} /></td>
+                                        <td className="p-3 font-bold text-blue-700 dark:text-blue-400">
+                                            <div className="flex flex-col">
+                                                <FormattedNumber value={totals.totalPayments} />
+                                                <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 font-normal">
+                                                    (سندات: <FormattedNumber value={totals.totalReceipts} /> | فواتير: <FormattedNumber value={totals.totalInvoicePayments} />)
+                                                </span>
+                                            </div>
+                                        </td>
                                     </>
                                 )}
                                 <td className={`p-3 font-bold ${totals.closingBalance >= 0 ? 'text-green-700 dark:text-green-500' : 'text-red-700 dark:text-red-500'}`}>
